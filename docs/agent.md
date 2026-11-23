@@ -13,7 +13,7 @@ executes what it asks for.
 The model and the API must already be running:
 
 ```powershell
-.\scripts\serve.ps1        # LFM3-Omni on 8080
+start_lfm3.bat              # LFM3-Omni on 8080, from LFM3_OMNI_ROOT
 pnpm dev                    # API on 3001, web on 3000
 pnpm agent "what notes mention foxes?"
 ```

@@ -38,6 +38,7 @@ if ($Embeddings) {
         '--embeddings',
         '-c', '8192',
         '-ngl', $env:LFM3_NGL,
+        '--device', $env:LFM3_DEVICE,
         '--host', $HostName,
         '--port', $env:LFM3_EMBED_PORT,
         '-np', '1'
@@ -47,7 +48,7 @@ if ($Embeddings) {
     Write-Host "Starting EmbeddingGemma 2 on port $($env:LFM3_EMBED_PORT) ($HostName)" -ForegroundColor Green
     Write-Host "  model  : $env:LFM3_EMBED_MODEL"
     Write-Host "  mmproj : $env:LFM3_EMBED_MMPROJ"
-    & (Join-Path $env:LFM3_ROOT 'runtime\llama-server.exe') @embedArgs
+    & (Join-Path $env:LFM3_OMNI_ROOT 'runtime\llama-server.exe') @embedArgs
     return
 }
 
@@ -55,6 +56,7 @@ $cliArgs = @(
     '-m', $env:LFM3_MODEL,
     '-mm', $env:LFM3_MMPROJ,
     '-ngl', $env:LFM3_NGL,
+    '--device', $env:LFM3_DEVICE,
     '--reasoning', $Reasoning,
     '--temp', "$Temp",
     '--host', $HostName,
@@ -70,4 +72,4 @@ Write-Host "  model  : $env:LFM3_MODEL"
 Write-Host "  mmproj : $env:LFM3_MMPROJ"
 Write-Host "  GPU    : -ngl $env:LFM3_NGL"
 
-& (Join-Path $env:LFM3_ROOT 'runtime\llama-server.exe') @cliArgs
+& (Join-Path $env:LFM3_OMNI_ROOT 'runtime\llama-server.exe') @cliArgs

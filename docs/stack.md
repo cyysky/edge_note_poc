@@ -11,17 +11,6 @@ reports no issues.
 | Node.js   | 26.10.0 | `engines.node: ">=26.0.0"` |
 | pnpm      | 12.6.0  | `packageManager` field     |
 
-## Continuous integration
-
-`.github/workflows/ci.yml` pins each action to its release tag; the runner uses
-the Node and pnpm versions above.
-
-| Action               | Version | Notes                   |
-| -------------------- | ------- | ----------------------- |
-| `actions/checkout`   | v7.0.1  | latest stable           |
-| `actions/setup-node` | v7.1.0  | `node-version: 26.10.0` |
-| `pnpm/action-setup`  | v6.1.1  | `version: 12.6.0`       |
-
 ## Applications and packages
 
 | Package                                                    | Version |

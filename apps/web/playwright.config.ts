@@ -15,10 +15,10 @@ const databasePath = fileURLToPath(
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
-  forbidOnly: Boolean(process.env.CI),
-  retries: process.env.CI ? 2 : 0,
+  forbidOnly: true,
+  retries: 0,
   workers: 1,
-  reporter: process.env.CI ? 'github' : [['list'], ['html', { open: 'never' }]],
+  reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL: `http://127.0.0.1:${WEB_PORT}`,
     trace: 'on-first-retry',

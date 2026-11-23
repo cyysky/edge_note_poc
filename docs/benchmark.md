@@ -3,8 +3,8 @@
 Measured on the machine that runs the model, not a synthetic rate. Reproduce with:
 
 ```powershell
-.\scripts\serve.ps1    # LFM3-Omni on 8080
-pnpm embed:serve       # EmbeddingGemma on 8091, for retrieval
+start_lfm3.bat         # LFM3-Omni on 8080 (in LFM3_OMNI_ROOT)
+start_embed.bat        # EmbeddingGemma on 8091, for retrieval
 pnpm bench --repeats 3 --md docs/benchmark.md
 ```
 

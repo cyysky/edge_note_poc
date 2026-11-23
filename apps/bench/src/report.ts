@@ -29,8 +29,8 @@ export function renderMarkdown(report: BenchReport): string {
   );
   lines.push('');
   lines.push('```powershell');
-  lines.push('.\\scripts\\serve.ps1    # LFM3-Omni on 8080');
-  lines.push('pnpm embed:serve       # EmbeddingGemma on 8091, for retrieval');
+  lines.push('start_lfm3.bat         # LFM3-Omni on 8080 (in LFM3_OMNI_ROOT)');
+  lines.push('start_embed.bat        # EmbeddingGemma on 8091, for retrieval');
   lines.push('pnpm bench --repeats 3 --md docs/benchmark.md');
   lines.push('```');
   lines.push('');

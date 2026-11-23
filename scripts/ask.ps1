@@ -39,7 +39,7 @@ param(
 
 . "$PSScriptRoot\_env.ps1"
 
-$runtime = Join-Path $env:LFM3_ROOT 'runtime'
+$runtime = Join-Path $env:LFM3_OMNI_ROOT 'runtime'
 
 if ($Tts) {
     if (-not $Prompt) { throw '-Tts requires -Prompt with the text to speak.' }

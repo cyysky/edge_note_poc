@@ -70,9 +70,13 @@ apps/web          Next.js 16 App Router client (port 3000)
 apps/api          NestJS 12 HTTP API (port 3001, prefix /api)
 packages/shared   Wire contracts + validation shared by both apps
 scripts/          PowerShell tooling for the local LFM3-Omni runtime
-models/ runtime/  Local model weights and binaries (gitignored)
 docs/             Current-state documentation
 ```
+
+Model weights, the llama.cpp build and the `start_*.bat` / `stop_*.bat`
+launchers live in `LFM3_OMNI_ROOT` (default `D:\workspace\20261123_lfm3_omni`),
+outside this repository, so a clone stays source-only. Both launchers pin
+`--device CUDA0`, the RTX 3080.
 
 The browser talks to `/api/*` on the web origin; `next.config.ts` rewrites that
 to the API. Server rendering calls the API directly.

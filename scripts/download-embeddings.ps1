@@ -33,7 +33,7 @@ $localNames = @{
 foreach ($name in $files) {
     # The projector is published as mmproj-*.gguf, but several models share that
     # name locally, so it is stored under a model-specific name in models/.
-    $destination = Join-Path $env:LFM3_ROOT "models\$($localNames[$name])"
+    $destination = Join-Path $env:LFM3_OMNI_ROOT "models\$($localNames[$name])"
     if (Test-Path $destination) {
         $size = [math]::Round((Get-Item $destination).Length / 1MB)
         Write-Host "SKIP    $name ($size MB already present)" -ForegroundColor DarkGray

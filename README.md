@@ -9,8 +9,10 @@ Three things live here:
 1. The **notes app** (web + api + shared packages) - the running application.
 2. The **agent** (`packages/agent`, `apps/agent`, `apps/bench`) - LFM3-Omni
    calling notes tools on its own, plus a benchmark of what it can actually do.
-3. The **local model runtime** (`models/`, `runtime/`, `scripts/`) - LFM3-Omni on
-   8080 and EmbeddingGemma 2 on 8091.
+3. The **local model runtime** - LFM3-Omni on 8080 and EmbeddingGemma 2 on 8091.
+   Weights, the llama.cpp build and the `start_*.bat`/`stop_*.bat` launchers live
+   in `D:\workspace\20261123_lfm3_omni`; `scripts/` holds the tooling that runs
+   from the repository.
 
 ## Quick start
 
@@ -32,18 +34,18 @@ pnpm dev
 
 ## Layout
 
-| Path                  | Contents                                                   |
-| --------------------- | ---------------------------------------------------------- |
-| `apps/web`            | Next.js client: notes list, dialog editor, `/chat` page    |
-| `apps/api`            | NestJS API: health, notes CRUD, chat and speech            |
-| `apps/agent`          | CLI for the notes agent                                    |
-| `apps/bench`          | Capability + latency benchmark for LFM3-Omni               |
-| `packages/shared`     | Wire contracts and validation used by both apps            |
-| `packages/agent`      | Model client, tool loop, notes tools, embeddings client    |
-| `docs/`               | Current-state docs: stack, architecture, agent, benchmarks |
-| `.agents/skills/`     | Installed Modern Web Guidance skill and guides             |
-| `scripts/`            | PowerShell tooling for the local LFM3-Omni runtime         |
-| `models/`, `runtime/` | Local model weights and binaries (gitignored)              |
+| Path                              | Contents                                                       |
+| --------------------------------- | -------------------------------------------------------------- |
+| `apps/web`                        | Next.js client: notes list, dialog editor, `/chat` page        |
+| `apps/api`                        | NestJS API: health, notes CRUD, chat and speech                |
+| `apps/agent`                      | CLI for the notes agent                                        |
+| `apps/bench`                      | Capability + latency benchmark for LFM3-Omni                   |
+| `packages/shared`                 | Wire contracts and validation used by both apps                |
+| `packages/agent`                  | Model client, tool loop, notes tools, embeddings client        |
+| `docs/`                           | Current-state docs: stack, architecture, agent, benchmarks     |
+| `.agents/skills/`                 | Installed Modern Web Guidance skill and guides                 |
+| `scripts/`                        | PowerShell tooling for the local LFM3-Omni runtime             |
+| `D:\workspace\20261123_lfm3_omni` | Weights, llama.cpp build, start/stop `.bat` (outside the repo) |
 
 ## Commands
 
@@ -124,7 +126,7 @@ recording is written as 16 kHz mono WAV because the model server cannot read the
 WebM/Opus that MediaRecorder would produce.
 
 ```powershell
-.\scripts\serve.ps1     # LFM3-Omni on 8080
+D:\workspace\20261123_lfm3_omni\start_lfm3.bat     # LFM3-Omni on 8080
 pnpm dev                # API on 3001, web on 3000
 ```
 
@@ -137,7 +139,7 @@ pnpm agent "Describe and save this." --image .\samples\test_shapes.png
 
 The six notes tools (`list`, `search`, `get`, `create`, `update`, `delete`) call
 the REST API, so the API stays the only writer. `search_notes` uses
-EmbeddingGemma 2 on 8091; start it with `pnpm embed:serve`. See
+EmbeddingGemma 2 on 8091; start it with `start_embed.bat`. See
 `docs/agent.md` and `docs/embeddings.md`.
 
 `POST /api/chat` takes the whole transcript and returns the reply plus a tool
@@ -193,9 +195,9 @@ retrieval and speech speed. `docs/benchmark.md` is the current run. The honest
 summary:
 
 - Fast and reliable at describing images, transcribing audio, and calling tools.
-- **Weak at arithmetic**: "20 - 4 × 3" answers "4" every time. Do not route sums
+- **Weak at arithmetic**: "20 - 4 Ã— 3" answers "4" every time. Do not route sums
   through this model.
-- Speech synthesis runs about 7× faster than real time on an RTX 3080.
+- Speech synthesis runs about 7Ã— faster than real time on an RTX 3080.
 
 ## LFM3-Omni-2B local runtime
 
@@ -204,15 +206,20 @@ Local, offline runner for
 on Windows + NVIDIA. Text, image, audio and video go in; text and speech come
 out.
 
-| Path                                       | Contents                                                     |
-| ------------------------------------------ | ------------------------------------------------------------ |
-| `models/LFM3-Omni-2B-Q8_0.gguf`            | 1.7 B param backbone, Q8_0 (1.72 GB)                         |
-| `models/mmproj-LFM3-Omni-2B-Q8_0.gguf`     | vision + audio projector (0.47 GB)                           |
-| `runtime/`                                 | llama.cpp `b12645` Windows CUDA 13.5 x64 build               |
-| `scripts/`                                 | `serve.ps1`, `stop.ps1`, `ask.ps1`, `verify.ps1`, `_env.ps1` |
-| `models/embeddinggemma-2-Q8_0.gguf`        | notes search embeddings (310 MB)                             |
-| `models/mmproj-embeddinggemma-2-Q8_0.gguf` | its multimodal projector (555 MB)                            |
-| `samples/`                                 | fixtures used to validate every modality                     |
+| Path                                 | Contents                                                |
+| ------------------------------------ | ------------------------------------------------------- |
+| `models\` (in `LFM3_OMNI_ROOT`)      | LFM3-Omni-2B Q8_0 (1.72 GB) and its projector (0.47 GB) |
+| `runtime\` (in `LFM3_OMNI_ROOT`)     | llama.cpp `b12645` Windows x64 CUDA build               |
+| `start_lfm3.bat` / `stop_lfm3.bat`   | port 8080, the chat model                               |
+| `start_embed.bat` / `stop_embed.bat` | port 8091, EmbeddingGemma 2                             |
+| `models\embeddinggemma-2-Q8_0.gguf`  | notes search embeddings (310 MB)                        |
+| `models\mmproj-embeddinggemma*.gguf` | its multimodal projector (555 MB)                       |
+| `scripts/`                           | `ask.ps1`, `verify.ps1`, `_env.ps1`                     |
+| `samples/`                           | fixtures used to validate every modality                |
+
+Weights and binaries live in `D:\workspace\20261123_lfm3_omni`, outside this
+repository, so a clone stays source-only. `scripts\_env.ps1` reads
+`LFM3_OMNI_ROOT`, which defaults to that path and can be overridden.
 
 Both GGUF files were SHA-256 verified against the Hugging Face LFS metadata:
 
@@ -236,24 +243,30 @@ llama.cpp silently runs CPU-only (~15 t/s instead of ~150 t/s). Override with
 
 ### Start and stop
 
-```powershell
-.\scripts\serve.ps1        # web UI + OpenAI-compatible API on port 8080
-.\scripts\stop.ps1         # stop it
-```
+````powershell
+D:\workspace\20261123_lfm3_omni\start_lfm3.bat    # chat model on 8080
+D:\workspace\20261123_lfm3_omni\stop_lfm3.bat     # stop it
+D:\workspace\20261123_lfm3_omni\start_embed.bat   # EmbeddingGemma 2 on 8091
+D:\workspace\20261123_lfm3_omni\stop_embed.bat    # stop it
 
 Then open <http://localhost:8080>.
 
-The server is **not** a background service. It runs only while `serve.ps1` (or
-`llama-server`) is alive, so "server unavailable" means nothing is listening.
-Check with `Get-Process llama-server` and
-`Invoke-RestMethod http://localhost:8080/health`. `localhost` resolves to `::1`
-first on Windows; `serve.ps1` binds both `127.0.0.1` and `::1`.
+Both launchers pin `--device CUDA0` (the RTX 3080) and refuse to start when the
+weights are missing or the port is already taken. The server is **not** a
+background service: it runs only while `start_lfm3.bat` (or `llama-server`) is
+alive, so "server unavailable" means nothing is listening. Check with
+`Get-Process llama-server` and
+`Invoke-RestMethod http://localhost:8080/health`. The launcher binds
+`127.0.0.1`, which browsers also reach as `localhost`.
 
-Start detached:
+Start detached, logging into the runtime folder:
 
 ```powershell
-Start-Process powershell -WindowStyle Hidden -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','.\scripts\serve.ps1'
-```
+Start-Process powershell -WindowStyle Hidden -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','D:\workspace\20261123_lfm3_omni\start_lfm3.ps1' -RedirectStandardOutput 'D:\workspace\20261123_lfm3_omni\logs\lfm3.out.log' -RedirectStandardError 'D:\workspace\20261123_lfm3_omni\logs\lfm3.err.log'
+````
+
+`pnpm embed:serve` and `scripts\serve.ps1` stay available from the repository
+and start the same two models with the same GPU pin.
 
 ### One-shot prompts
 
@@ -271,8 +284,10 @@ Start-Process powershell -WindowStyle Hidden -ArgumentList '-NoProfile','-Execut
 
 ### Server API
 
-`serve.ps1` accepts `-Port`, `-HostName`, `-Ctx`, `-Parallel`, `-Reasoning`,
-`-Temp`, and forwards anything else to `llama-server`.
+`start_lfm3.bat` forwards its arguments, through `start_lfm3.ps1`, to
+`llama-server`, so `start_lfm3.bat -c 16384` works. `scripts\serve.ps1` exposes
+the same knobs as `-Port`, `-HostName`, `-Ctx`, `-Parallel`, `-Reasoning` and
+`-Temp`.
 
 - Web UI: <http://localhost:8080>
 - OpenAI-compatible base URL: `http://localhost:8080/v1` (any model name)
@@ -317,7 +332,7 @@ projector loaded.
 | `BF16` + `mmproj-...-BF16`     | 3.31 / 0.91 GB | full precision               |
 
 ```powershell
-hf download LiquidAI/LFM3-Omni-2B-GGUF LFM3-Omni-2B-Q4_K_M.gguf mmproj-LFM3-Omni-2B-Q4_K_M.gguf --local-dir models
+hf download LiquidAI/LFM3-Omni-2B-GGUF LFM3-Omni-2B-Q4_K_M.gguf mmproj-LFM3-Omni-2B-Q4_K_M.gguf --local-dir "$env:LFM3_OMNI_ROOT\models"
 ```
 
 Then update `LFM3_MODEL` / `LFM3_MMPROJ` in `scripts/_env.ps1`.
@@ -325,7 +340,8 @@ Then update `LFM3_MODEL` / `LFM3_MMPROJ` in `scripts/_env.ps1`.
 ## Troubleshooting
 
 - **Port 8080 says "server unavailable"** - nothing is listening. Run
-  `.\scripts\serve.ps1`; verify with `Invoke-RestMethod http://localhost:8080/health`.
+  `D:\workspace\20261123_lfm3_omni\start_lfm3.bat`; verify with
+  `Invoke-RestMethod http://localhost:8080/health`.
 - **~15 t/s, `--list-devices` shows `(none)`** - CUDA DLLs are not on `PATH`.
 - **Video prompts fail** - mismatched `ffmpeg`/`ffprobe`; set `LFM3_FFMPEG_DIR`.
 - **`better-sqlite3` fails to build** - install MSVC Build Tools for the native
@@ -334,11 +350,11 @@ Then update `LFM3_MODEL` / `LFM3_MMPROJ` in `scripts/_env.ps1`.
   baked into the Next build. Start the API on 3001, or rebuild with
   `API_BASE_URL` set.
 - **Chat says "The assistant could not answer"** - 8080 is not answering. Start it
-  with `scripts/serve.ps1`. A failed _speech_ synthesis is not an error; the text
-  answer still appears.
+  with `D:\workspace\20261123_lfm3_omni\start_lfm3.bat`. A failed _speech_
+  synthesis is not an error; the text answer still appears.
 - **`search_notes` fails but everything else works** - 8091 is not running. Start
-  it with `pnpm embed:serve`; downloads come from
-  `scripts/download-embeddings.ps1`.
+  it with `D:\workspace\20261123_lfm3_omni\start_embed.bat` (or
+  `pnpm embed:serve`); downloads come from `scripts/download-embeddings.ps1`.
 - **"Take photo" / "Record audio" do nothing on a phone** - the page is on a
   plain-HTTP LAN origin, where `navigator.mediaDevices` is `undefined`. Use the
   HTTPS address from `scripts/https-serve.ps1` with `certs/rootCA.crt` installed,
@@ -362,13 +378,6 @@ Then update `LFM3_MODEL` / `LFM3_MMPROJ` in `scripts/_env.ps1`.
 - `docs/web-guidance.md` - the Modern Web Guidance rules this UI follows.
 - `THIRD-PARTY-NOTICES.md` - vendored skill, model and sample-media attribution.
 - `LICENSE` - MIT for this repository's own source.
-
-## Continuous integration
-
-`.github/workflows/ci.yml` runs the same checks locally as on the remote:
-`pnpm peers check`, `format:check`, `lint`, `typecheck`, `build`, `test`, then
-`test:e2e` against real servers and the stub model. Node and pnpm versions come
-from `docs/stack.md`.
 
 ## License
 

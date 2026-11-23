@@ -15,8 +15,11 @@ mock layer and no in-browser storage for notes.
 
 The two model servers are separate processes because one `llama-server` is
 bound to one loaded model. Both are local-only and are not started by
-`pnpm dev`; `scripts/serve.ps1` starts the chat model, `serve.ps1 -Embeddings`
-starts the embedding model.
+`pnpm dev`. `start_lfm3.bat` starts the chat model and `start_embed.bat` starts
+the embedding model; both live in `LFM3_OMNI_ROOT` (default
+`D:\workspace\20261123_lfm3_omni`) next to the weights, and both pin
+`--device CUDA0`, the RTX 3080. The repository also exposes `scripts\serve.ps1`
+and `pnpm embed:serve`, which launch the same two models with the same pin.
 
 ```
 phone ──https──> tls proxy (3443) ──http──> next (3000) ──┐

@@ -14,7 +14,7 @@ $expected = @{
 
 $failed = 0
 foreach ($name in $expected.Keys) {
-    $path = Join-Path $env:LFM3_ROOT "models\$name"
+    $path = Join-Path $env:LFM3_OMNI_ROOT "models\$name"
     if (-not (Test-Path $path)) {
         Write-Host "MISSING $name" -ForegroundColor Red
         $failed++
@@ -30,7 +30,7 @@ foreach ($name in $expected.Keys) {
 }
 
 Write-Host "`nDevices:" -ForegroundColor Cyan
-& (Join-Path $env:LFM3_ROOT 'runtime\llama-cli.exe') --list-devices | ForEach-Object { "  $_" }
+& (Join-Path $env:LFM3_OMNI_ROOT 'runtime\llama-cli.exe') --list-devices | ForEach-Object { "  $_" }
 
 if ($SkipGeneration) {
     if ($failed) { exit 1 }
@@ -38,7 +38,7 @@ if ($SkipGeneration) {
 }
 
 Write-Host "`nGeneration smoke test:" -ForegroundColor Cyan
-$output = & (Join-Path $env:LFM3_ROOT 'runtime\llama-cli.exe') `
+$output = & (Join-Path $env:LFM3_OMNI_ROOT 'runtime\llama-cli.exe') `
     -m $env:LFM3_MODEL -mm $env:LFM3_MMPROJ -ngl $env:LFM3_NGL `
     --temp 0 -p "Reply with exactly: MODEL OK" -n 16 2>&1
 $output | Select-String -Pattern 'MODEL OK' | Out-Null

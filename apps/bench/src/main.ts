@@ -119,7 +119,9 @@ async function main(): Promise<number> {
   const client = new ModelClient({ baseUrl: values['model-url'] });
   if (!(await client.health())) {
     console.error(`llama-server is not answering at ${values['model-url']}.`);
-    console.error('Start it with: .\\scripts\\serve.ps1');
+    console.error(
+      'Start it with: start_lfm3.bat (in LFM3_OMNI_ROOT, default D:\\workspace\\20261123_lfm3_omni)',
+    );
     return 1;
   }
 

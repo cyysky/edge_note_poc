@@ -232,7 +232,7 @@ export class EmbeddingClient {
         );
       }
       throw new EmbeddingError(
-        `Embedding server is unreachable at ${this.baseUrl}. Start it with \`pnpm embed:serve\`.`,
+        `Embedding server is unreachable at ${this.baseUrl}. Start it with start_embed.bat in LFM3_OMNI_ROOT (or pnpm embed:serve).`,
         'unreachable',
         undefined,
         error instanceof Error ? error.message : undefined,

@@ -68,7 +68,8 @@ export class ChatController {
       if (error instanceof ModelError && error.kind === 'unreachable') {
         throw new HttpException(
           {
-            message: 'The local LFM3-Omni server is not running. Start it with scripts/serve.ps1.',
+            message:
+              'The local LFM3-Omni server is not running. Start it with start_lfm3.bat in LFM3_OMNI_ROOT.',
             details: [],
           },
           HttpStatus.SERVICE_UNAVAILABLE,

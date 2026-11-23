@@ -95,7 +95,9 @@ export class ChatService {
 
 export class ModelUnavailableError extends Error {
   constructor() {
-    super('The local LFM3-Omni server is not running. Start it with scripts/serve.ps1.');
+    super(
+      'The local LFM3-Omni server is not running. Start it with start_lfm3.bat in LFM3_OMNI_ROOT.',
+    );
     this.name = 'ModelUnavailableError';
   }
 }

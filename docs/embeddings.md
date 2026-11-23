@@ -8,10 +8,10 @@ prefix on media.
 
 ## Files and server
 
-| Path                                       | Purpose                        |
-| ------------------------------------------ | ------------------------------ |
-| `models/embeddinggemma-2-Q8_0.gguf`        | 310 MB text/embedding backbone |
-| `models/mmproj-embeddinggemma-2-Q8_0.gguf` | 555 MB multimodal projector    |
+| Path                                                        | Purpose                        |
+| ----------------------------------------------------------- | ------------------------------ |
+| `<LFM3_OMNI_ROOT>\models\embeddinggemma-2-Q8_0.gguf`        | 310 MB text/embedding backbone |
+| `<LFM3_OMNI_ROOT>\models\mmproj-embeddinggemma-2-Q8_0.gguf` | 555 MB multimodal projector    |
 
 The projector is published as `mmproj-Q8_0.gguf`; it is stored under a
 model-specific name because several models share that filename shape. Without it,
@@ -19,7 +19,7 @@ media embeddings fail even though text embeddings still answer.
 
 ```powershell
 .\scripts\download-embeddings.ps1   # skips files already present
-pnpm embed:serve                      # llama-server --embeddings -c 8192 on 8091
+start_embed.bat                     # --embeddings -c 8192 on 8091, from LFM3_OMNI_ROOT
 Invoke-RestMethod http://127.0.0.1:8091/health
 ```
 
@@ -97,8 +97,8 @@ vector table plus an invalidation path, not a bigger request.
 ## Failure modes
 
 - **8091 not answering** - `search_notes` throws a `ToolError` naming
-  `pnpm embed:serve`; the model sees a tool failure and can fall back to
-  `list_notes`.
+  `start_embed.bat` (or `pnpm embed:serve`); the model sees a tool failure and
+  can fall back to `list_notes`.
 - **Projector missing** - text search still works; media embeddings fail. Download
   both files.
 - **Dimension mismatch** - comparing vectors of different lengths throws rather

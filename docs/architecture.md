@@ -1,0 +1,78 @@
+# Architecture
+
+The UI reads real data from a real server and a real database. There is no
+mock layer and no in-browser storage.
+
+## Processes
+
+| Process              | Port | Responsibility                                   |
+| -------------------- | ---- | ------------------------------------------------ |
+| `apps/web` (Next.js) | 3000 | Server-rendered notes page, client interactivity |
+| `apps/api` (NestJS)  | 3001 | `/api/health`, `/api/notes` CRUD, SQLite access  |
+
+In development the browser calls `/api/*` on the web origin. `next.config.ts`
+rewrites that path to the API origin, so the browser never makes a cross-origin
+request and CORS is only needed for direct tooling calls. During server
+rendering the page calls the API origin directly.
+
+```
+browser ──> next (3000) ──┐
+   │                      ├─ rewrite /api/* ──> nest (3001) ──> SQLite (WAL)
+   └── server render ─────┘
+```
+
+The API origin is a **build-time** value (`API_BASE_URL`, default
+`http://127.0.0.1:3001`). Next compiles rewrites into the build output, so
+changing it requires a rebuild, not just a restart.
+
+## Packages
+
+- `packages/shared` holds the wire contract (`Note`, `NoteInput`,
+  `ApiErrorResponse`, `ERROR_CODES`) and `validateNoteInput`. Both apps import
+  it, so a field rename is a compile error on both sides. The API validates with
+  exactly the code the client uses, keeping rules in one place.
+- `apps/api` is layered: controller -> service -> repository. The repository owns
+  every SQL string, prepares statements once at construction, and always binds
+  parameters.
+- `apps/web` renders on the server first. `page.tsx` fetches the initial list;
+  `NotesView` owns client state and calls `/api/notes` for mutations.
+
+## Data
+
+`apps/api/src/database` owns a single `better-sqlite3` connection with
+`journal_mode = WAL`, `foreign_keys = ON` and `busy_timeout = 5000`.
+
+Migrations are append-only and tracked by `PRAGMA user_version`. Re-running is a
+no-op. Never edit a shipped migration; add a new one. The first migration creates:
+
+```sql
+CREATE TABLE notes (
+  id         TEXT PRIMARY KEY,
+  title      TEXT NOT NULL,
+  body       TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+) STRICT;
+```
+
+`DATABASE_PATH` selects the file (`:memory:` in tests). The default,
+`<cwd>/data/displayer.db`, is resolved from the process working directory, so
+always pass an absolute path when the working directory is not the API package.
+
+## Error contract
+
+Every failure, framework-generated or not, is shaped by a global exception filter
+into:
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "...",
+    "details": [{ "path": "title", "message": "..." }]
+  }
+}
+```
+
+`code` is `VALIDATION_FAILED`, `NOT_FOUND` or `INTERNAL_ERROR`. Clients switch on
+`code`, never on the HTTP status alone.

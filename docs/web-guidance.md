@@ -102,6 +102,41 @@ the guides this app commits to; consult them before changing the matching code.
 - A rejection is mapped to an actionable sentence (permission denied, no device,
   device busy) instead of the raw `DOMException` name.
 
+## `security` - media capture needs a secure origin
+
+- The camera and microphone are only requested from a page that can actually
+  have them. `apps/web/src/lib/secure-context.ts` accepts `https:` and the
+  loopback origins browsers treat as trustworthy (`localhost`, `*.localhost`,
+  `127.0.0.0/8`, `[::1]`) and rejects a plain-HTTP LAN address, where Chrome
+  hides `navigator.mediaDevices`.
+- On such an origin `/chat` renders a persistent `.chat-notice` naming the exact
+  address and the two commands that fix it. It is a paragraph, not a live
+  region: the condition exists before the page is read, and the composer's
+  single status region stays reserved for turn progress, so the same fact is
+  never announced twice.
+- The notice is a sibling of the log and the form, never inside the `<ol>` or
+  the `role="alert"` error block, so a static condition cannot be confused with
+  a failed turn.
+- The fix is a local root CA plus a TLS terminator (`scripts/https-cert.ps1`,
+  `scripts/https-serve.ps1`). No HSTS: RFC 6797 forbids caching it for an IP
+  literal, and the guide's `max-age` rollout advice applies to named hosts.
+- `local-network-access` is **not** the answer here. It gates a public HTTPS page
+  asking to reach a LAN device; this app needs the LAN page itself to become
+  trustworthy.
+
+## `privacy` - say why a device is unavailable
+
+- A hidden `getUserMedia` is indistinguishable from a denied permission or a
+  missing device unless the page says which one it is. The notice states that
+  the page is unencrypted, shows the origin, and names the server-side fix; it
+  does not blame the person or ask them to change a browser setting that cannot
+  help.
+- The message names where the certificate goes (this device) and who serves it
+  (this machine), matching the existing rule that media never leaves the
+  machine.
+- `describeMediaError` maps the resulting `NotSupportedError` to a message that
+  says "use HTTPS" rather than echoing the platform error name.
+
 ## `accessible-error-announcement` - chat failure
 
 - A failed turn renders `<div class="alert" role="alert">`, containing a
@@ -139,11 +174,17 @@ the guides this app commits to; consult them before changing the matching code.
 - Do not replace the native dialog with a scripted modal.
 - Do not drop `:modal` scoping from the backdrop rules.
 - Do not add a dependency for behaviour the platform already provides.
+- Do not try to make a plain-HTTP LAN origin capture media. There is no browser
+  flag, permission prompt or warning bypass that creates a secure context; only
+  an HTTPS origin will do.
 - Do not hide the file inputs with `display: none`; that removes them from the
   keyboard and accessibility tree.
 - Do not turn a failed speech synthesis into a failed answer.
 - Do not add a second live region for attachment status; the composer's single
   `role="status"` is the announcement path.
+- Do not render the secure-context notice as an alert or a live region. It
+  describes the origin, not a turn, and the error block stays reserved for a
+  failed request.
 - Do not let a turn send while a caption or transcript is still pending, and keep
   the check in both the button and the submit handler.
 - Do not drop the English caption/transcript from a later turn; the bytes are

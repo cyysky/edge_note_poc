@@ -146,6 +146,46 @@ what the browser calls at attach time. `POST /api/chat/speech` returns WAV
 bytes. The transcript lives in the browser, so the API holds no per-user
 conversation state.
 
+### Use the camera or microphone from a phone
+
+A phone reaches the app by its LAN address, and that address is not a secure
+context, so Chrome hides `navigator.mediaDevices`: the chat page says so and
+"Take photo" / "Record audio" cannot open a device. Clicking through a
+certificate warning does not help - the origin has to be HTTPS.
+
+A public CA cannot issue a certificate for a private address, so the repo makes
+its own root CA and serves TLS in front of the same build:
+
+```powershell
+.\scripts\https-cert.ps1          # creates certs/rootCA.crt (once per machine)
+.\scripts\https-serve.ps1         # https://<lan-ip>:3443 -> next on 3100
+```
+
+Then, on the phone:
+
+1. Copy `certs/rootCA.crt` to the device.
+2. **Settings -> Security -> Encryption & credentials -> Install a certificate ->
+   CA certificate**, and pick the file. Android warns that a third-party may
+   monitor traffic; that warning is expected for a CA you created.
+3. Open `https://<lan-ip>:3443/chat` and allow the camera/microphone when asked.
+
+The CA is `O=Displayer Local, CN=Displayer Local CA`, SHA-256 fingerprint
+`61:A4:32:AE:D7:14:62:DE:87:D7:0F:C6:90:96:FC:67:AC:9B:44:76:2B:A5:2D:E9:BE:A3:C1:16:CD:01:76:6D`
+over RSA-3072. Install only that file, and only on devices you control.
+
+The leaf covers `127.0.0.1`, `localhost` and every LAN address detected at mint
+time, and it is backdated one hour so a phone clock running slightly behind this
+machine still validates it. Re-running the script is a no-op unless an address
+changed or the leaf is within a week of expiry; `-Force` reissues unconditionally.
+After a DHCP change, re-run with `-Force` and reinstall `rootCA.crt` only if the
+authority was recreated too.
+
+Chrome on Android trusts user-installed CAs, so this is enough for the browser.
+The proxy sets `x-forwarded-proto: https`, so server code sees the real scheme.
+
+HSTS is deliberately absent: the spec forbids caching it for an IP literal, and
+the connection is only as private as the LAN.
+
 ### What it is actually good at
 
 `pnpm bench` measures text, image, audio, mixed-media and tool use, plus
@@ -299,6 +339,17 @@ Then update `LFM3_MODEL` / `LFM3_MMPROJ` in `scripts/_env.ps1`.
 - **`search_notes` fails but everything else works** - 8091 is not running. Start
   it with `pnpm embed:serve`; downloads come from
   `scripts/download-embeddings.ps1`.
+- **"Take photo" / "Record audio" do nothing on a phone** - the page is on a
+  plain-HTTP LAN origin, where `navigator.mediaDevices` is `undefined`. Use the
+  HTTPS address from `scripts/https-serve.ps1` with `certs/rootCA.crt` installed,
+  as in "Use the camera or microphone from a phone".
+- **The phone shows a certificate warning before the page loads** - the leaf is
+  not trusted yet, or the LAN address changed after minting. Reinstall
+  `certs/rootCA.crt`, and re-run `scripts/https-cert.ps1 -Force` if the address
+  changed.
+- **`curl.exe` fails on `https://127.0.0.1:3443` with "revocation status unknown"**
+  - Windows Schannel wants to reach a CRL for the local CA. `curl --ssl-no-revoke
+--cacert certs/rootCA.crt ...` verifies fine; browsers are unaffected.
 
 ## Documentation
 

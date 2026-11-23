@@ -11,6 +11,7 @@ mock layer and no in-browser storage for notes.
 | `apps/api` (NestJS)           | 3001 | REST API, SQLite access, chat orchestration                      |
 | LFM3-Omni `llama-server`      | 8080 | Chat completions plus speech synthesis                           |
 | EmbeddingGemma `llama-server` | 8091 | `/v1/embeddings` for notes search                                |
+| `scripts/https-proxy.mjs`     | 3443 | Local TLS in front of the web app, for phone camera and mic      |
 
 The two model servers are separate processes because one `llama-server` is
 bound to one loaded model. Both are local-only and are not started by
@@ -18,11 +19,11 @@ bound to one loaded model. Both are local-only and are not started by
 starts the embedding model.
 
 ```
-browser ──> next (3000) ──┐
-   │                      ├─ rewrite /api/* ──> nest (3001) ──> SQLite (WAL)
-   └── server render ─────┘                        │
-                                                   ├─> llama-server (8080) chat + speech
-                                                   └─> llama-server (8091) embeddings
+phone ──https──> tls proxy (3443) ──http──> next (3000) ──┐
+                                                        ├─ rewrite /api/* ──> nest (3001) ──> SQLite (WAL)
+desktop browser ────────────────────────> next (3000) ──┘        │
+                                                                 ├─> llama-server (8080) chat + speech
+                                                                 └─> llama-server (8091) embeddings
 ```
 
 The API origin is a **build-time** value (`API_BASE_URL`, default
@@ -32,6 +33,30 @@ changing it requires a rebuild, not just a restart.
 The API reaches the model servers only from the server process; the browser
 never talks to 8080 or 8091 directly. That keeps media bytes off a second
 network hop and means a model restart cannot break the web origin.
+
+## Secure context on the LAN
+
+`getUserMedia` only exists in a secure context. Loopback is trustworthy, so the
+desktop on `localhost` is fine, but a phone reaching `http://<lan-ip>:3100` is
+not: Chrome omits `navigator.mediaDevices` entirely. A private address cannot
+get a public certificate, so `scripts/https-cert.ps1` mints a local root CA plus
+a leaf naming the machine's LAN address, `rootCA.crt` is installed once on the
+phone, and `scripts/https-serve.ps1` runs a TLS terminator that proxies to the
+untouched Next server. The hostname is required to be the address itself, so the
+whole app is one origin and the `/api` rewrite keeps working.
+
+Both certificates are backdated one hour: a phone whose clock is a few minutes
+behind this machine would otherwise see `notBefore` in its own future and reject
+the chain. Addresses are validated before they reach OpenSSL, because a
+malformed SAN entry truncates the rest of the list instead of failing.
+
+`scripts/https-proxy.mjs` adds `x-forwarded-proto: https` and returns a readable
+502 when Next is not listening, so a stopped app is not a TLS error. HSTS is
+inapplicable: RFC 6797 forbids caching it for an IP literal.
+
+The web app does not guess at this. `apps/web/src/lib/secure-context.ts` decides
+whether the live origin can capture media, and `/chat` shows a persistent notice
+naming the HTTPS route when it cannot.
 
 ## Packages
 

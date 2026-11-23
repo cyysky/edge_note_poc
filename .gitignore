@@ -10,6 +10,9 @@ out/*
 
 # --- Node / TypeScript ---
 node_modules/
+# Next generates this file; its contents are an implementation detail (see
+# node_modules/next/dist/docs/.../config/typescript.md).
+next-env.d.ts
 .next/
 dist/
 build/

@@ -1,4 +1,5 @@
 import type { Message, ToolCall, UserContentPart } from './messages.js';
+import { AUDIO_TRANSCRIPT_PROMPT, IMAGE_CAPTION_PROMPT } from './prompts.js';
 import { toWireTools, type AnyToolDefinition } from './tools.js';
 
 /** Everything that can go wrong talking to llama-server, with the cause kept. */
@@ -177,6 +178,44 @@ export class ModelClient {
     };
   }
 
+  /**
+   * Turn one attachment into English text.
+   *
+   * The answer is meant to outlive the bytes: chat replays history as text, so a
+   * later turn can only refer to an attachment if this text was derived now.
+   */
+  async describe(
+    media: { readonly mimeType: string; readonly data: string },
+    kind: 'image' | 'audio',
+    options: { readonly maxTokens?: number; readonly signal?: AbortSignal } = {},
+  ): Promise<string> {
+    const prompt = kind === 'image' ? IMAGE_CAPTION_PROMPT : AUDIO_TRANSCRIPT_PROMPT;
+    const part =
+      kind === 'image'
+        ? { type: 'image' as const, mimeType: media.mimeType, data: media.data }
+        : { type: 'audio' as const, mimeType: media.mimeType, data: media.data };
+    const response = await this.request(
+      '/v1/chat/completions',
+      {
+        model: this.model,
+        messages: toWireMessages([
+          { role: 'user', content: [{ type: 'text', text: prompt }, part] },
+        ]),
+        temperature: 0,
+        max_tokens: options.maxTokens ?? 400,
+      },
+      options.signal,
+    );
+    const parsed = (await this.readJson(response)) as {
+      choices?: readonly { message?: { content?: string | null } }[];
+    };
+    const text = parsed.choices?.[0]?.message?.content?.trim() ?? '';
+    if (text.length === 0) {
+      throw new ModelError('The model returned an empty description.', 'protocol');
+    }
+    return text;
+  }
+
   /** Speech synthesis. Returns raw audio bytes; the caller owns the container. */
   async speak(
     text: string,
@@ -202,7 +241,7 @@ export class ModelClient {
     }
   }
 
-  private async request(path: string, body?: unknown): Promise<Response> {
+  private async request(path: string, body?: unknown, signal?: AbortSignal): Promise<Response> {
     const headers: Record<string, string> = {};
     if (body !== undefined) headers['content-type'] = 'application/json';
     if (this.apiKey) headers['authorization'] = `Bearer ${this.apiKey}`;
@@ -213,7 +252,11 @@ export class ModelClient {
         method: body === undefined ? 'GET' : 'POST',
         headers,
         ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
-        signal: AbortSignal.timeout(this.timeoutMs),
+        // Both: the caller's cancellation and the client-wide timeout, so a
+        // closed dialog stops the work but a hung server is still bounded.
+        signal: signal
+          ? AbortSignal.any([signal, AbortSignal.timeout(this.timeoutMs)])
+          : AbortSignal.timeout(this.timeoutMs),
       });
     } catch (error) {
       if (error instanceof Error && error.name === 'TimeoutError') {

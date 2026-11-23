@@ -108,6 +108,14 @@ specific guidance rules this commits to.
 one turn, answers in text, and can speak the answer. The model chooses tool calls
 itself: there is no hard-coded flow, only a tool schema and a small loop.
 
+Every attached picture is **captioned** and every recording is **transcribed to
+English text** the moment it is attached, before anything is sent. The caption or
+transcript appears on the attachment card, the send button waits for it, and that
+English text is what joins the conversation: it travels with the turn and it is
+replayed in later turns, when the bytes are no longer resent. Attaching a file
+while the model server is down shows the failure on the card instead of silently
+sending an attachment the model never described.
+
 Pictures and clips can come from the device as well as from disk. **Take photo**
 shows a live webcam preview and captures one still; **Record audio** records the
 microphone for up to two minutes. Capture happens in a native dialog, the preview
@@ -133,8 +141,10 @@ EmbeddingGemma 2 on 8091; start it with `pnpm embed:serve`. See
 `docs/agent.md` and `docs/embeddings.md`.
 
 `POST /api/chat` takes the whole transcript and returns the reply plus a tool
-trace. `POST /api/chat/speech` returns WAV bytes. The transcript lives in the
-browser, so the API holds no per-user conversation state.
+trace. `POST /api/chat/describe` turns one attachment into English text and is
+what the browser calls at attach time. `POST /api/chat/speech` returns WAV
+bytes. The transcript lives in the browser, so the API holds no per-user
+conversation state.
 
 ### What it is actually good at
 

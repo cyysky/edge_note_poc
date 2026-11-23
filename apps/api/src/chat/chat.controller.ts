@@ -3,8 +3,11 @@ import type { Response } from 'express';
 
 import { ModelClient, ModelError } from '@displayer/agent';
 import {
+  CHAT_MAX_MEDIA_BYTES,
   validateChatRequest,
+  type ChatMedia,
   type ChatResponse,
+  type DescribeResponse,
   type FieldIssue,
   type SpeechRequest,
 } from '@displayer/shared';
@@ -26,6 +29,20 @@ export class ChatController {
     const validation = validateChatRequest(body);
     if (!validation.ok) throw new ChatValidationError(validation.issues);
     return this.chat.reply(validation.value);
+  }
+
+  /**
+   * Caption or transcribe one attachment, before it joins the conversation.
+   *
+   * Not part of `POST /chat` because the answer is shown to the person first:
+   * they get to see what the model heard or saw while the file is still just an
+   * attachment, and their next message can rely on that text.
+   */
+  @Post('describe')
+  async describe(@Body() body: unknown): Promise<DescribeResponse> {
+    const validation = validateDescribeRequest(body);
+    if (!validation.ok) throw new ChatValidationError(validation.issues);
+    return this.chat.describe(validation.value.media, validation.value.kind);
   }
 
   /**
@@ -68,6 +85,59 @@ export class ChatValidationError extends HttpException {
     super({ message: 'The chat request is invalid.', details: issues }, HttpStatus.BAD_REQUEST);
     this.name = 'ChatValidationError';
   }
+}
+
+type DescribeValidation =
+  | {
+      readonly ok: true;
+      readonly value: { readonly media: ChatMedia; readonly kind: 'image' | 'audio' };
+    }
+  | { readonly ok: false; readonly issues: readonly FieldIssue[] };
+
+const DATA_URL_PREFIX = /^data:[^;]+;base64,/i;
+
+function validateDescribeRequest(input: unknown): DescribeValidation {
+  if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+    return { ok: false, issues: [{ path: '', message: 'Expected a JSON object.' }] };
+  }
+  const record = input as Record<string, unknown>;
+  const kind = record['kind'];
+  const media = record['media'];
+  const issues: FieldIssue[] = [];
+
+  if (kind !== 'image' && kind !== 'audio') {
+    issues.push({ path: 'kind', message: 'Kind must be image or audio.' });
+  }
+  let parsed: ChatMedia | undefined;
+  if (typeof media !== 'object' || media === null || Array.isArray(media)) {
+    issues.push({ path: 'media', message: 'Expected a media object.' });
+  } else {
+    const entry = media as Record<string, unknown>;
+    const mimeType = entry['mimeType'];
+    const data = entry['data'];
+    if (typeof mimeType !== 'string' || mimeType.length === 0) {
+      issues.push({ path: 'media.mimeType', message: 'MIME type is required.' });
+    }
+    if (typeof data !== 'string' || data.length === 0) {
+      issues.push({ path: 'media.data', message: 'Base64 data is required.' });
+    } else if (DATA_URL_PREFIX.test(data)) {
+      issues.push({
+        path: 'media.data',
+        message: 'Send base64 payloads without a data-URL prefix.',
+      });
+    } else if (Math.floor((data.length * 3) / 4) > CHAT_MAX_MEDIA_BYTES) {
+      issues.push({
+        path: 'media.data',
+        message: `Each file must be at most ${CHAT_MAX_MEDIA_BYTES / (1024 * 1024)} MB.`,
+      });
+    } else if (typeof mimeType === 'string' && mimeType.length > 0) {
+      parsed = { mimeType, data };
+    }
+  }
+  if (issues.length > 0 || !parsed || (kind !== 'image' && kind !== 'audio')) {
+    return { ok: false, issues };
+  }
+  return { ok: true, value: { media: parsed, kind } };
 }
 
 type SpeechValidation =

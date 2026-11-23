@@ -80,3 +80,24 @@ describe('chat transport', () => {
     expect(response.body.error.details[0].path).toBe('messages');
   });
 });
+
+describe('POST /api/chat/describe', () => {
+  it('rejects a missing kind before it reaches the model', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/chat/describe')
+      .send({ media: { mimeType: 'image/png', data: 'AAAA' } })
+      .expect(400);
+
+    expect(response.body.error.code).toBe('VALIDATION_FAILED');
+    expect(response.body.error.details[0].path).toBe('kind');
+  });
+
+  it('rejects a data-URL payload, which would double the prefix at the model', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/chat/describe')
+      .send({ kind: 'image', media: { mimeType: 'image/png', data: 'data:image/png;base64,AAAA' } })
+      .expect(400);
+
+    expect(response.body.error.details[0].path).toBe('media.data');
+  });
+});

@@ -35,6 +35,7 @@ describe('validateChatRequest', () => {
           text: 'what is this',
           images: [{ mimeType: 'image/png', data: 'AAAA' }],
           audio: [{ mimeType: 'audio/wav', data: 'BBBB' }],
+          derived: [{ text: 'A red circle.' }, { text: 'A short clip.' }],
         },
       ],
     });
@@ -164,5 +165,79 @@ describe('ChatRequest type', () => {
 
     const result = validateChatRequest(JSON.parse(JSON.stringify(request)));
     expect(result).toEqual({ ok: true, value: request });
+  });
+});
+
+describe('derived text', () => {
+  const withMedia = (extra: Record<string, unknown>) => ({
+    messages: [
+      {
+        role: 'user',
+        text: 'what is this',
+        images: [{ mimeType: 'image/png', data: 'AAAA' }],
+        ...extra,
+      },
+    ],
+  });
+
+  it('accepts one caption for one image', () => {
+    const result = validateChatRequest(withMedia({ derived: [{ text: 'A red circle.' }] }));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.messages[0]?.derived).toEqual([{ text: 'A red circle.' }]);
+  });
+
+  it('requires text for a turn that carries media', () => {
+    const issues = expectIssues(withMedia({}));
+    expect(issues[0]?.path).toBe('messages[0].derived');
+  });
+
+  it('rejects one caption short of the attachments', () => {
+    const issues = expectIssues(
+      withMedia({
+        images: [
+          { mimeType: 'image/png', data: 'AAAA' },
+          { mimeType: 'image/png', data: 'BBBB' },
+        ],
+        derived: [{ text: 'Only one.' }],
+      }),
+    );
+    expect(issues[0]?.message).toContain('one entry for each of the 2');
+  });
+
+  it('replays an earlier caption once its bytes are gone', () => {
+    const result = validateChatRequest({
+      messages: [
+        {
+          role: 'user',
+          text: 'what did I show you?',
+          derived: [{ text: 'The quick brown fox.' }],
+        },
+        { role: 'assistant', text: 'A recording.' },
+        { role: 'user', text: 'thanks' },
+      ],
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.messages[0]?.derived).toEqual([{ text: 'The quick brown fox.' }]);
+  });
+
+  it('rejects derived-only text on the last turn, which must include its media', () => {
+    const issues = expectIssues({
+      messages: [{ role: 'user', text: 'hi', derived: [{ text: 'A ghost caption.' }] }],
+    });
+    expect(issues[0]?.path).toBe('messages[0].derived');
+  });
+
+  it('rejects a blank caption, which would silently lose the attachment', () => {
+    const issues = expectIssues(withMedia({ derived: [{ text: '   ' }] }));
+    expect(issues[0]?.path).toBe('messages[0].derived[0].text');
+  });
+
+  it('drops unknown fields instead of echoing them back', () => {
+    const result = validateChatRequest(withMedia({ derived: [{ text: 'Hola.', lanuage: 'es' }] }));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.messages[0]?.derived?.[0]).toEqual({ text: 'Hola.' });
   });
 });

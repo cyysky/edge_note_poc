@@ -65,12 +65,19 @@ the guides this app commits to; consult them before changing the matching code.
   by labels but stay in the tab order and keep their own label, rather than being
   hidden with `display: none`.
 - The submit button is `type="submit"` inside a real `<form>`; the attachment
-  remove buttons are `type="button"` so they cannot submit the composer.
+  remove buttons are `type="button"` so they cannot submit the composer, and each
+  is labelled `Remove <file name>` rather than "Remove".
 - Ctrl/Cmd+Enter submits through `requestSubmit()`, the same path as the button,
   so keyboard and pointer users cannot diverge. A plain Enter still inserts a
   newline.
 - Send is disabled while a request is in flight and when there is neither text
   nor an attachment, which is the one state the API would reject anyway.
+- Send is also disabled while any attachment's caption or transcript is still
+  being derived, and `handleSubmit` re-checks that state itself. The key handler
+  calls `requestSubmit()`, which bypasses a disabled button, so the gate has to
+  exist in the handler as well as in the markup.
+- The button says `Listening…` while it waits on that derived text, so the
+  disabled state explains itself instead of looking broken.
 
 ## `forms` - capture controls
 
@@ -99,8 +106,15 @@ the guides this app commits to; consult them before changing the matching code.
 
 - A failed turn renders `<div class="alert" role="alert">`, containing a
   `<strong>` headline and the detail as separate text.
-- A visually hidden `role="status"` reports "Waiting for the assistant." and
-  "Generating spoken audio.", so a slow local model is not silence.
+- The composer has **one** visually hidden `role="status"` region, which reports
+  "Waiting for the assistant." and "Generating spoken audio.", so a slow local
+  model is not silence.
+- A finished caption or transcript is announced through that same region, as
+  `Caption for <file>: <text>`. The guidance is one polite region per page and
+  warns that a region inserted already populated is not announced reliably, so
+  the attachment card is plain text and only the always-present region changes.
+  It carries the latest notice only; each new one replaces the previous, which
+  keeps an older caption from being read again.
 - A failed **speech** synthesis is swallowed on purpose: the text answer is the
   primary result and must not be replaced by an error about the enhancement.
 
@@ -128,6 +142,12 @@ the guides this app commits to; consult them before changing the matching code.
 - Do not hide the file inputs with `display: none`; that removes them from the
   keyboard and accessibility tree.
 - Do not turn a failed speech synthesis into a failed answer.
+- Do not add a second live region for attachment status; the composer's single
+  `role="status"` is the announcement path.
+- Do not let a turn send while a caption or transcript is still pending, and keep
+  the check in both the button and the submit handler.
+- Do not drop the English caption/transcript from a later turn; the bytes are
+  gone, so that text is all the model has left of the attachment.
 - Do not open the camera or microphone without a click; no auto-start previews.
 - Do not leave a capture stream running after the dialog closes, and do not drop
   the `pagehide` release.

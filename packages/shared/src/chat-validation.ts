@@ -3,6 +3,7 @@ import {
   CHAT_MAX_MEDIA_BYTES,
   CHAT_MAX_MEDIA_PER_TURN,
   CHAT_MESSAGE_MAX,
+  type ChatDerivation,
   type ChatMedia,
   type ChatRequest,
   type ChatTurn,
@@ -47,6 +48,60 @@ function isMedia(value: unknown, path: string, issues: FieldIssue[]): value is C
     return false;
   }
   return true;
+}
+
+/** The text the model derived from each attachment, in attachment order. */
+function derivationList(
+  value: unknown,
+  path: string,
+  expected: number | 'any',
+  issues: FieldIssue[],
+): readonly ChatDerivation[] | undefined {
+  if (value === undefined) {
+    issues.push({
+      path,
+      message: 'The last message must say what its attachments contain.',
+    });
+    return undefined;
+  }
+  if (!Array.isArray(value)) {
+    issues.push({ path, message: 'Expected an array.' });
+    return undefined;
+  }
+  if (expected !== 'any' && value.length !== expected) {
+    issues.push({
+      path,
+      message: `Expected one entry for each of the ${expected} attachment(s).`,
+    });
+    return undefined;
+  }
+  if (expected === 'any' && value.length === 0) {
+    issues.push({ path, message: 'At least one entry is required.' });
+    return undefined;
+  }
+  const kept: ChatDerivation[] = [];
+  value.forEach((entry, index) => {
+    const itemPath = `${path}[${index}]`;
+    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+      issues.push({ path: itemPath, message: 'Expected an object.' });
+      return;
+    }
+    const record = entry as Record<string, unknown>;
+    const text = record['text'];
+    if (typeof text !== 'string' || text.trim().length === 0) {
+      issues.push({ path: `${itemPath}.text`, message: 'Text is required.' });
+      return;
+    }
+    if (text.length > CHAT_MESSAGE_MAX) {
+      issues.push({
+        path: `${itemPath}.text`,
+        message: `Text must be at most ${CHAT_MESSAGE_MAX} characters.`,
+      });
+      return;
+    }
+    kept.push({ text });
+  });
+  return kept.length === value.length ? kept : undefined;
 }
 
 function mediaList(
@@ -119,6 +174,23 @@ export function validateChatRequest(input: unknown): ChatValidationResult {
 
     const images = mediaList(record['images'], `${path}.images`, issues);
     const audio = mediaList(record['audio'], `${path}.audio`, issues);
+    const mediaCount = (images?.length ?? 0) + (audio?.length ?? 0);
+    // A live turn must say what each of its attachments contains. An earlier
+    // turn is replayed without its bytes, so it carries only the derived text
+    // and has nothing to count against.
+    let derived: readonly ChatDerivation[] | undefined;
+    if (mediaCount > 0) {
+      derived = derivationList(record['derived'], `${path}.derived`, mediaCount, issues);
+    } else if (record['derived'] !== undefined) {
+      if (index === messages.length - 1) {
+        issues.push({
+          path: `${path}.derived`,
+          message: 'The last message must carry media with its derived text.',
+        });
+      } else {
+        derived = derivationList(record['derived'], `${path}.derived`, 'any', issues);
+      }
+    }
 
     if (role === 'assistant' && ((images?.length ?? 0) > 0 || (audio?.length ?? 0) > 0)) {
       issues.push({ path, message: 'Only user turns may carry media.' });
@@ -135,6 +207,7 @@ export function validateChatRequest(input: unknown): ChatValidationResult {
       text: typeof text === 'string' ? text : '',
       ...(images ? { images } : {}),
       ...(audio ? { audio } : {}),
+      ...(derived ? { derived } : {}),
     });
   });
 

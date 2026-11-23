@@ -88,10 +88,11 @@ and posts it back with each turn; the API replays it into the agent loop. A
 reload or a second tab therefore cannot corrupt a running conversation, and the
 API stays a pure function of its input.
 
-| Endpoint                | Body            | Response                           |
-| ----------------------- | --------------- | ---------------------------------- |
-| `POST /api/chat`        | `ChatRequest`   | `ChatResponse` (reply, tool trace) |
-| `POST /api/chat/speech` | `SpeechRequest` | `audio/wav` or `audio/mpeg` bytes  |
+| Endpoint                  | Body              | Response                           |
+| ------------------------- | ----------------- | ---------------------------------- |
+| `POST /api/chat`          | `ChatRequest`     | `ChatResponse` (reply, tool trace) |
+| `POST /api/chat/describe` | `DescribeRequest` | `DescribeResponse` (English text)  |
+| `POST /api/chat/speech`   | `SpeechRequest`   | `audio/wav` or `audio/mpeg` bytes  |
 
 `llama-server` ignores `modalities` on a chat completion and always answers in
 text, so speech is a second explicit request. The browser asks for audio only for
@@ -100,6 +101,30 @@ turns it will play; a synthesis failure never hides the text answer.
 Only the last turn may carry media. Earlier turns are replayed as text, so the
 API never re-sends old images or audio, and the request body has a bound the
 contract can compute exactly.
+
+### Attachments become English text
+
+A picture is captioned and a recording is transcribed **at attach time**, not
+when the turn is sent. `ChatView` reads the file to base64, posts it to
+`POST /api/chat/describe`, and shows the returned English text on the
+attachment card. Send is disabled while any card is still `pending`, so a turn
+can never carry an attachment whose text the model has not produced.
+
+The text is not a preview that is thrown away. Each turn carries a `derived`
+array with one entry per attachment, images first and then audio, and the API
+validates that count exactly. `toUserMessage` puts the caption directly after
+its image part and the transcript directly after its audio part, so the model
+sees contiguous bytes-then-words instead of a paragraph detached from the media.
+A later turn has no bytes; `toHistoryMessage` replays `derived` as an
+`Attachments in this message:` block, which is why the model can still answer
+"what was in the picture?" two turns later.
+
+`kind: 'image' | 'audio'` is explicit because the two prompts are different:
+one asks for a verbatim description of what is visible, the other for a verbatim
+transcription of speech, and both answer in English. An attachment that fails to
+describe still sends, with `derived: [{ text: '' }]`, and the card shows the
+failure: the file was the user's choice, so it goes, but nothing invents content
+the model did not report.
 
 Media arrives three ways and converges on one path. A file pick, a webcam still
 and a microphone clip all become a `File`, get read to base64 by

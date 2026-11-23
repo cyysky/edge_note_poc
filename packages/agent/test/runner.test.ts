@@ -335,3 +335,50 @@ describe('runAgent', () => {
     expect(secondRequest.messages.filter((message) => message.role === 'tool')).toHaveLength(2);
   });
 });
+
+describe('ModelClient.describe', () => {
+  it('asks for a caption with the image part and no tools', async () => {
+    const fake = fakeFetch(() => completion({ role: 'assistant', content: 'A red circle.' }));
+    const client = new ModelClient({ fetch: fake.fetch });
+
+    const text = await client.describe({ mimeType: 'image/png', data: 'AAAA' }, 'image');
+
+    expect(text).toBe('A red circle.');
+    const body = fake.calls[0]?.body as {
+      messages: { content: { type: string; text?: string }[] }[];
+      tools?: unknown;
+    };
+    expect(body.tools).toBeUndefined();
+    expect(body.messages[0]?.content[0]?.text).toContain('Describe this image');
+    expect(body.messages[0]?.content[1]).toEqual({
+      type: 'image_url',
+      image_url: { url: 'data:image/png;base64,AAAA' },
+    });
+  });
+
+  it('asks for an English transcript of an audio clip', async () => {
+    const fake = fakeFetch(() => completion({ role: 'assistant', content: 'Hello there.' }));
+    const client = new ModelClient({ fetch: fake.fetch });
+
+    const text = await client.describe({ mimeType: 'audio/wav', data: 'BBBB' }, 'audio');
+
+    expect(text).toBe('Hello there.');
+    const body = fake.calls[0]?.body as {
+      messages: { content: { type: string; text?: string }[] }[];
+    };
+    expect(body.messages[0]?.content[0]?.text).toContain('Transcribe the speech');
+    expect(body.messages[0]?.content[1]).toEqual({
+      type: 'input_audio',
+      input_audio: { data: 'BBBB', format: 'wav' },
+    });
+  });
+
+  it('treats an empty answer as a protocol error instead of showing nothing', async () => {
+    const fake = fakeFetch(() => completion({ role: 'assistant', content: '   ' }));
+    const client = new ModelClient({ fetch: fake.fetch });
+
+    await expect(
+      client.describe({ mimeType: 'image/png', data: 'AAAA' }, 'image'),
+    ).rejects.toMatchObject({ kind: 'protocol' });
+  });
+});

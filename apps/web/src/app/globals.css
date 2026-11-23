@@ -674,13 +674,52 @@ label.button {
 }
 
 .chat-attachments li {
-  display: inline-flex;
-  align-items: center;
+  display: grid;
   gap: var(--space-1);
-  padding-inline-start: var(--space-3);
+  inline-size: min(32rem, 100%);
+  padding: var(--space-3);
   border: 1px dashed var(--border);
-  border-radius: 999px;
+  border-radius: var(--radius);
   font-size: 0.85rem;
+}
+
+.chat-attachment-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.chat-derived-label {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* The derived text is the authority on what the attachment contains, so it is
+   set as body copy rather than a caption. */
+.chat-attachment-text {
+  margin: 0;
+  white-space: pre-wrap;
+  text-wrap: pretty;
+}
+
+.chat-attachment-text[data-state='pending'] {
+  color: var(--muted);
+}
+
+.chat-attachment-text[data-state='failed'] {
+  color: var(--danger);
+}
+
+.chat-derived {
+  margin: 0;
+  padding-inline-start: 1.1rem;
+  display: grid;
+  gap: var(--space-1);
+  font-size: 0.9rem;
 }
 
 @container (width < 32rem) {

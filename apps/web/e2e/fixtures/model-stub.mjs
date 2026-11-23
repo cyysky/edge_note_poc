@@ -73,11 +73,46 @@ const server = createServer(async (request, response) => {
     }
 
     const messages = Array.isArray(body.messages) ? body.messages : [];
+    const firstUser = messages.find((message) => message.role === 'user');
+    const firstParts = Array.isArray(firstUser?.content) ? firstUser.content : [];
+    const firstText = firstParts.find((part) => part?.type === 'text')?.text ?? '';
+    // The API's own caption/transcript prompts, as sent by ModelClient.describe.
+    if (firstText.startsWith('Describe this image')) {
+      json(response, 200, {
+        choices: [
+          {
+            finish_reason: 'stop',
+            message: { role: 'assistant', content: 'A red circle on a plain background.' },
+          },
+        ],
+        usage: { prompt_tokens: 12, completion_tokens: 8 },
+        timings: { predicted_per_second: 100, prompt_per_second: 1000 },
+      });
+      return;
+    }
+    if (firstText.startsWith('Transcribe the speech')) {
+      json(response, 200, {
+        choices: [
+          {
+            finish_reason: 'stop',
+            message: { role: 'assistant', content: 'The quick brown fox jumps over the lazy dog.' },
+          },
+        ],
+        usage: { prompt_tokens: 12, completion_tokens: 8 },
+        timings: { predicted_per_second: 100, prompt_per_second: 1000 },
+      });
+      return;
+    }
     const lastUser = [...messages].reverse().find((message) => message.role === 'user');
     const content = typeof lastUser?.content === 'string' ? lastUser.content : '';
-    const hasAudio = Array.isArray(lastUser?.content)
-      ? lastUser.content.some((part) => part?.type === 'input_audio')
-      : false;
+    const parts = Array.isArray(lastUser?.content) ? lastUser.content : [];
+    const hasAudio = parts.some((part) => part?.type === 'input_audio');
+    const hasImage = parts.some((part) => part?.type === 'image_url');
+    // The caption the API derived for each attachment is inlined as text, so
+    // the reply proves it reached the model rather than being dropped.
+    const derived = parts
+      .filter((part) => part?.type === 'text' && /^(Image|Audio) \d+:/.test(part.text ?? ''))
+      .map((part) => part.text);
 
     // One tool round trip, then a final answer: the shape the real model
     // produces, so the UI's tool trace is exercised rather than assumed.
@@ -106,14 +141,20 @@ const server = createServer(async (request, response) => {
       return;
     }
 
+    const reply =
+      derived.length > 0
+        ? 'You gave me: ' + derived.join(' ')
+        : hasAudio
+          ? 'I heard the recording.'
+          : hasImage
+            ? 'I can see the picture.'
+            : `Stub reply to ${chatCalls} call(s).`;
+
     json(response, 200, {
       choices: [
         {
           finish_reason: 'stop',
-          message: {
-            role: 'assistant',
-            content: hasAudio ? 'I heard the recording.' : `Stub reply to ${chatCalls} call(s).`,
-          },
+          message: { role: 'assistant', content: reply },
         },
       ],
       usage: { prompt_tokens: 12, completion_tokens: 8 },

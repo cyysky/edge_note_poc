@@ -39,12 +39,26 @@ export interface ChatMedia {
   readonly mimeType: string;
 }
 
+/**
+ * One attachment, turned into English text the model can replay cheaply.
+ *
+ * Chat is stateless, so anything only the attachment could answer would be lost
+ * on the next request: earliers turn are replayed as text. Deriving the text
+ * once, when the file is attached, is what lets a later turn refer back to it.
+ */
+export interface ChatDerivation {
+  /** Caption for an image, transcript for an audio clip. Always English. */
+  readonly text: string;
+}
+
 export interface ChatTurn {
   readonly role: ChatRole;
   /** Prose the user typed, or the assistant's final answer. */
   readonly text: string;
   readonly images?: readonly ChatMedia[];
   readonly audio?: readonly ChatMedia[];
+  /** What the model said each attachment contains; one entry per image or clip. */
+  readonly derived?: readonly ChatDerivation[];
 }
 
 export interface ChatRequest {
@@ -63,6 +77,17 @@ export interface ChatResponse {
   readonly reply: string;
   readonly tools: readonly ChatToolTrace[];
   readonly stopReason: 'final' | 'steps';
+}
+
+/** Image captioning and speech transcription both answer in prose. */
+export interface DescribeRequest {
+  readonly media: ChatMedia;
+  readonly kind: 'image' | 'audio';
+}
+
+/** Always English: the prompt translates, so a later turn can replay it as-is. */
+export interface DescribeResponse {
+  readonly text: string;
 }
 
 export type SpeechFormat = 'wav' | 'mp3';

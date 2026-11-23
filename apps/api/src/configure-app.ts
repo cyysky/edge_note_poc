@@ -1,4 +1,6 @@
-import type { INestApplication } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
+
+import { CHAT_MAX_BODY_BYTES } from '@displayer/shared';
 
 import { ApiExceptionFilter } from './common/api-exception.filter.js';
 
@@ -6,9 +8,14 @@ import { ApiExceptionFilter } from './common/api-exception.filter.js';
  * HTTP configuration shared by `main.ts` and the e2e tests, so tests exercise
  * exactly the pipeline production runs.
  */
-export function configureApp(app: INestApplication): void {
+export function configureApp(app: NestExpressApplication): void {
   app.setGlobalPrefix('api');
   app.useGlobalFilters(new ApiExceptionFilter());
+  // Nest's default 100 kB JSON limit silently predates chat attachments: an
+  // 88 kB WAV arrives as ~118 kB of base64 and was rejected by the transport
+  // before validation could explain why. Size the parser from the contract so
+  // anything the contract permits is actually deliverable.
+  app.useBodyParser('json', { limit: CHAT_MAX_BODY_BYTES });
   // The browser normally reaches the API through the Next rewrite, so CORS is
   // only needed for direct cross-origin calls (tools, alternate dev ports).
   app.enableCors({

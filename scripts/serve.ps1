@@ -10,6 +10,9 @@
 .EXAMPLE
   .\scripts\serve.ps1
   .\scripts\serve.ps1 -Port 8080 -Ctx 16384
+
+.EXAMPLE
+  .\scripts\serve.ps1 -Embeddings
 #>
 [CmdletBinding()]
 param(
@@ -19,11 +22,34 @@ param(
     [int]$Parallel = 1,
     [string]$Reasoning = 'off',
     [double]$Temp = 0,
+    [switch]$Embeddings,
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$Extra
 )
 
 . "$PSScriptRoot\_env.ps1"
+
+if ($Embeddings) {
+    # One llama-server process loads one model, so EmbeddingGemma runs on its own
+    # port next to the chat model rather than replacing it.
+    $embedArgs = @(
+        '-m', $env:LFM3_EMBED_MODEL,
+        '-mm', $env:LFM3_EMBED_MMPROJ,
+        '--embeddings',
+        '-c', '8192',
+        '-ngl', $env:LFM3_NGL,
+        '--host', $HostName,
+        '--port', $env:LFM3_EMBED_PORT,
+        '-np', '1'
+    )
+    if ($Extra) { $embedArgs += $Extra }
+
+    Write-Host "Starting EmbeddingGemma 2 on port $($env:LFM3_EMBED_PORT) ($HostName)" -ForegroundColor Green
+    Write-Host "  model  : $env:LFM3_EMBED_MODEL"
+    Write-Host "  mmproj : $env:LFM3_EMBED_MMPROJ"
+    & (Join-Path $env:LFM3_ROOT 'runtime\llama-server.exe') @embedArgs
+    return
+}
 
 $cliArgs = @(
     '-m', $env:LFM3_MODEL,

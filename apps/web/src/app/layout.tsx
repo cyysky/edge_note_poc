@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import Link from 'next/link';
 import type { ReactNode } from 'react';
 
 import './globals.css';
@@ -22,6 +23,10 @@ export default function RootLayout({ children }: { readonly children: ReactNode 
         <a className="skip-link" href="#main">
           Skip to content
         </a>
+        <nav className="site-nav" aria-label="Primary">
+          <Link href="/">Notes</Link>
+          <Link href="/chat">Chat</Link>
+        </nav>
         {children}
       </body>
     </html>

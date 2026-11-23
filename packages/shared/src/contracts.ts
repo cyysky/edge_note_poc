@@ -44,6 +44,8 @@ export interface ApiErrorResponse {
 export const ERROR_CODES = {
   validationFailed: 'VALIDATION_FAILED',
   notFound: 'NOT_FOUND',
+  /** The request body was larger than the API will parse. */
+  payloadTooLarge: 'PAYLOAD_TOO_LARGE',
   internal: 'INTERNAL_ERROR',
 } as const;
 

@@ -1,0 +1,31 @@
+{
+  "name": "@displayer/bench",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "displayer-bench": "./dist/main.js"
+  },
+  "scripts": {
+    "prebuild": "pnpm --filter @displayer/shared build && pnpm --filter @displayer/agent build",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js",
+    "pretest": "pnpm --filter @displayer/shared build && pnpm --filter @displayer/agent build",
+    "test": "vitest run",
+    "pretypecheck": "pnpm --filter @displayer/shared build && pnpm --filter @displayer/agent build",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@displayer/agent": "workspace:*",
+    "@displayer/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "26.6.6",
+    "eslint": "10.15.0",
+    "globals": "17.14.0",
+    "typescript-eslint": "8.73.0",
+    "vitest": "5.1.1"
+  }
+}

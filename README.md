@@ -4,11 +4,13 @@ A small, complete reference app: **Next.js 16** App Router on the front,
 **NestJS 12** behind it, **SQLite** on disk, with **LFM3-Omni-2B** running
 locally for text, image, audio and video.
 
-Two independent things live here:
+Three things live here:
 
 1. The **notes app** (web + api + shared packages) - the running application.
-2. The **local LFM3-Omni runtime** (`models/`, `runtime/`, `scripts/`) - an
-   offline multimodal model that serves a web UI on port 8080.
+2. The **agent** (`packages/agent`, `apps/agent`, `apps/bench`) - LFM3-Omni
+   calling notes tools on its own, plus a benchmark of what it can actually do.
+3. The **local model runtime** (`models/`, `runtime/`, `scripts/`) - LFM3-Omni on
+   8080 and EmbeddingGemma 2 on 8091.
 
 ## Quick start
 
@@ -32,10 +34,13 @@ pnpm dev
 
 | Path                  | Contents                                                   |
 | --------------------- | ---------------------------------------------------------- |
-| `apps/web`            | Next.js client: server-rendered list, client dialog editor |
-| `apps/api`            | NestJS API: `/api/health`, `/api/notes` CRUD               |
+| `apps/web`            | Next.js client: notes list, dialog editor, `/chat` page    |
+| `apps/api`            | NestJS API: health, notes CRUD, chat and speech            |
+| `apps/agent`          | CLI for the notes agent                                    |
+| `apps/bench`          | Capability + latency benchmark for LFM3-Omni               |
 | `packages/shared`     | Wire contracts and validation used by both apps            |
-| `docs/`               | `stack.md`, `architecture.md`, `web-guidance.md`           |
+| `packages/agent`      | Model client, tool loop, notes tools, embeddings client    |
+| `docs/`               | Current-state docs: stack, architecture, agent, benchmarks |
 | `.agents/skills/`     | Installed Modern Web Guidance skill and guides             |
 | `scripts/`            | PowerShell tooling for the local LFM3-Omni runtime         |
 | `models/`, `runtime/` | Local model weights and binaries (gitignored)              |
@@ -48,22 +53,31 @@ pnpm build          # shared, then api and web
 pnpm test           # unit and e2e suites
 pnpm test:unit      # unit only
 pnpm test:e2e       # Playwright (web) and supertest (api)
+pnpm agent          # notes agent CLI (needs the model + API running)
+pnpm bench          # benchmark LFM3-Omni on this machine
+pnpm embed:serve    # EmbeddingGemma 2 on 8091
 pnpm typecheck      # tsc --noEmit everywhere
 pnpm lint           # eslint everywhere
 pnpm format         # prettier --write
 pnpm format:check   # prettier --check
 ```
 
+`pnpm test:e2e` starts both apps on private ports and a **stub** model server on
+8181, so the browser suite needs no GPU, no model weights and no running
+`llama-server`. Model quality is measured separately with `pnpm bench`.
+
 ## Configuration
 
 Defaults work with no configuration. To override, copy `.env.example` to
 `.env.local` in `apps/web` and/or set the API environment variables.
 
-| Variable        | Default                 | Used by                                 |
-| --------------- | ----------------------- | --------------------------------------- |
-| `API_BASE_URL`  | `http://127.0.0.1:3001` | web (build-time; also server rendering) |
-| `PORT`          | `3001`                  | api                                     |
-| `DATABASE_PATH` | `data/displayer.db`     | api                                     |
+| Variable         | Default                 | Used by                                 |
+| ---------------- | ----------------------- | --------------------------------------- |
+| `API_BASE_URL`   | `http://127.0.0.1:3001` | web (build-time; also server rendering) |
+| `PORT`           | `3001`                  | api                                     |
+| `DATABASE_PATH`  | `data/displayer.db`     | api                                     |
+| `MODEL_BASE_URL` | `http://127.0.0.1:8080` | api (chat + speech)                     |
+| `NOTES_API_URL`  | `http://127.0.0.1:3001` | agent tools inside the api              |
 
 The browser reaches the API through a Next rewrite at `/api/*`, so no CORS
 handling is needed for normal use.
@@ -88,6 +102,51 @@ The UI uses a native `<dialog>` for editing and a container-query table that
 becomes a stacked card list on narrow widths. See `docs/web-guidance.md` for the
 specific guidance rules this commits to.
 
+## Chat and the agent
+
+`/chat` is a conversation with LFM3-Omni. It accepts text, images and audio in
+one turn, answers in text, and can speak the answer. The model chooses tool calls
+itself: there is no hard-coded flow, only a tool schema and a small loop.
+
+Pictures and clips can come from the device as well as from disk. **Take photo**
+shows a live webcam preview and captures one still; **Record audio** records the
+microphone for up to two minutes. Capture happens in a native dialog, the preview
+never leaves the machine, and bytes only travel when the turn is sent. A
+recording is written as 16 kHz mono WAV because the model server cannot read the
+WebM/Opus that MediaRecorder would produce.
+
+```powershell
+.\scripts\serve.ps1     # LFM3-Omni on 8080
+pnpm dev                # API on 3001, web on 3000
+```
+
+Open <http://localhost:3000/chat>. Or drive the same agent from the terminal:
+
+```powershell
+pnpm agent "what notes mention foxes?"
+pnpm agent "Describe and save this." --image .\samples\test_shapes.png
+```
+
+The six notes tools (`list`, `search`, `get`, `create`, `update`, `delete`) call
+the REST API, so the API stays the only writer. `search_notes` uses
+EmbeddingGemma 2 on 8091; start it with `pnpm embed:serve`. See
+`docs/agent.md` and `docs/embeddings.md`.
+
+`POST /api/chat` takes the whole transcript and returns the reply plus a tool
+trace. `POST /api/chat/speech` returns WAV bytes. The transcript lives in the
+browser, so the API holds no per-user conversation state.
+
+### What it is actually good at
+
+`pnpm bench` measures text, image, audio, mixed-media and tool use, plus
+retrieval and speech speed. `docs/benchmark.md` is the current run. The honest
+summary:
+
+- Fast and reliable at describing images, transcribing audio, and calling tools.
+- **Weak at arithmetic**: "20 - 4 × 3" answers "4" every time. Do not route sums
+  through this model.
+- Speech synthesis runs about 7× faster than real time on an RTX 3080.
+
 ## LFM3-Omni-2B local runtime
 
 Local, offline runner for
@@ -95,13 +154,15 @@ Local, offline runner for
 on Windows + NVIDIA. Text, image, audio and video go in; text and speech come
 out.
 
-| Path                                   | Contents                                                     |
-| -------------------------------------- | ------------------------------------------------------------ |
-| `models/LFM3-Omni-2B-Q8_0.gguf`        | 1.7 B param backbone, Q8_0 (1.72 GB)                         |
-| `models/mmproj-LFM3-Omni-2B-Q8_0.gguf` | vision + audio projector (0.47 GB)                           |
-| `runtime/`                             | llama.cpp `b12645` Windows CUDA 13.5 x64 build               |
-| `scripts/`                             | `serve.ps1`, `stop.ps1`, `ask.ps1`, `verify.ps1`, `_env.ps1` |
-| `samples/`                             | fixtures used to validate every modality                     |
+| Path                                       | Contents                                                     |
+| ------------------------------------------ | ------------------------------------------------------------ |
+| `models/LFM3-Omni-2B-Q8_0.gguf`            | 1.7 B param backbone, Q8_0 (1.72 GB)                         |
+| `models/mmproj-LFM3-Omni-2B-Q8_0.gguf`     | vision + audio projector (0.47 GB)                           |
+| `runtime/`                                 | llama.cpp `b12645` Windows CUDA 13.5 x64 build               |
+| `scripts/`                                 | `serve.ps1`, `stop.ps1`, `ask.ps1`, `verify.ps1`, `_env.ps1` |
+| `models/embeddinggemma-2-Q8_0.gguf`        | notes search embeddings (310 MB)                             |
+| `models/mmproj-embeddinggemma-2-Q8_0.gguf` | its multimodal projector (555 MB)                            |
+| `samples/`                                 | fixtures used to validate every modality                     |
 
 Both GGUF files were SHA-256 verified against the Hugging Face LFS metadata:
 
@@ -222,10 +283,19 @@ Then update `LFM3_MODEL` / `LFM3_MMPROJ` in `scripts/_env.ps1`.
 - **`/api/*` returns 500 from the web app** - the API is not running on the port
   baked into the Next build. Start the API on 3001, or rebuild with
   `API_BASE_URL` set.
+- **Chat says "The assistant could not answer"** - 8080 is not answering. Start it
+  with `scripts/serve.ps1`. A failed _speech_ synthesis is not an error; the text
+  answer still appears.
+- **`search_notes` fails but everything else works** - 8091 is not running. Start
+  it with `pnpm embed:serve`; downloads come from
+  `scripts/download-embeddings.ps1`.
 
 ## Documentation
 
 - `AGENTS.md` - instructions for coding agents (versions, tests, docs, guidance).
 - `docs/stack.md` - pinned versions and every deviation from latest.
-- `docs/architecture.md` - process topology, data model, error contract.
+- `docs/architecture.md` - process topology, data model, chat, error contract.
+- `docs/agent.md` - the agent CLI, its tools, and the loop.
+- `docs/embeddings.md` - EmbeddingGemma 2 wire formats and retrieval design.
+- `docs/benchmark.md` - measured capability and latency, and how to reproduce.
 - `docs/web-guidance.md` - the Modern Web Guidance rules this UI follows.

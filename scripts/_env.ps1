@@ -7,6 +7,12 @@ $env:LFM3_ROOT = $Root
 $env:LFM3_MODEL = Join-Path $Root 'models\LFM3-Omni-2B-Q8_0.gguf'
 $env:LFM3_MMPROJ = Join-Path $Root 'models\mmproj-LFM3-Omni-2B-Q8_0.gguf'
 
+# EmbeddingGemma 2 answers the notes search path on its own server, because a
+# llama-server process is bound to one model at a time.
+$env:LFM3_EMBED_MODEL = Join-Path $Root 'models\embeddinggemma-2-Q8_0.gguf'
+$env:LFM3_EMBED_MMPROJ = Join-Path $Root 'models\mmproj-embeddinggemma-2-Q8_0.gguf'
+$env:LFM3_EMBED_PORT = if ($env:LFM3_EMBED_PORT) { $env:LFM3_EMBED_PORT } else { '8091' }
+
 $env:LFM3_NGL = if ($env:LFM3_NGL) { $env:LFM3_NGL } else { '99' }
 
 # The CUDA llama.cpp build links cudart64_13 / cublas64_13. Without those DLLs on

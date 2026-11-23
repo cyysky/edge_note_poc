@@ -11,7 +11,7 @@ reports no issues.
 | Node.js   | 26.10.0 | `engines.node: ">=26.0.0"` |
 | pnpm      | 12.6.0  | `packageManager` field     |
 
-## Applications
+## Applications and packages
 
 | Package                                                    | Version |
 | ---------------------------------------------------------- | ------- |
@@ -22,6 +22,11 @@ reports no issues.
 | `better-sqlite3`                                           | 13.2.0  |
 | `reflect-metadata`                                         | 0.2.2   |
 | `rxjs`                                                     | 7.8.2   |
+| `zod`                                                      | 4.6.7   |
+
+Workspace packages `@displayer/shared`, `@displayer/agent`,
+`@displayer/agent-cli` and `@displayer/bench` are private and unversioned
+(`0.0.0`); they are linked with `workspace:*`.
 
 ## Types
 
@@ -53,16 +58,18 @@ reports no issues.
 | `@testing-library/jest-dom`   | 8.0.0   |
 | `@testing-library/user-event` | 14.6.13 |
 | `supertest`                   | 7.3.2   |
+| `@swc/core`                   | 1.16.22 |
+| `unplugin-swc`                | 2.0.0   |
 
 ## Deliberate deviations from `latest`
 
 Only two packages are not on the registry's `latest` tag. Both are recorded here
 because `AGENTS.md` requires it.
 
-| Package                     | Pinned  | Latest  | Reason                                                                                                                                                                                                                                                                                                                      |
-| --------------------------- | ------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `typescript`                | 6.0.3   | 7.0.2   | `typescript-eslint@8.73.0` (and its canary) requires `typescript >=4.8.4 <6.1.0`, and TS 7 removed `moduleResolution: "node10"`. TS 7 cannot be used until the lint toolchain supports it.                                                                                                                                  |
-| `eslint` (transitive peers) | 10.15.0 | 10.15.0 | `eslint` itself is latest, but `eslint-plugin-import`, `eslint-plugin-jsx-a11y` and `eslint-plugin-react` still declare an `^9` peer cap. They lint cleanly on 10.x, so the cap is declared in `pnpm-workspace.yaml` under `peerDependencyRules.allowedVersions`. Remove those entries when the plugins widen their ranges. |
+| Package                     | Pinned  | Latest  | Reason                                                                                                                                                                                                                                                            |
+| --------------------------- | ------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `typescript`                | 6.0.3   | 7.0.2   | `typescript-eslint@8.73.0` (and its canary) requires `typescript >=4.8.4 <6.1.0`, and TS 7 removed `moduleResolution: "node10"`. TS 7 cannot be used until the lint toolchain supports it.                                                                        |
+| `eslint` (transitive peers) | 10.15.0 | 10.15.0 | `eslint` itself is latest, but `eslint-plugin-import`, `eslint-plugin-jsx-a11y` and `eslint-plugin-react` still declare an `^9` peer cap. They lint cleanly on 10.x, so the cap is declared in `pnpm-workspace.yaml` under `peerDependencyRules.allowedVersions`. |
 
 `typescript@6` warns when `moduleResolution` is `node10`. All packages therefore
 use `module: "node16"` + `moduleResolution: "node16"` (apps and shared) or
@@ -71,3 +78,8 @@ use `module: "node16"` + `moduleResolution: "node16"` (apps and shared) or
 `better-sqlite3` is chosen over Node's built-in `node:sqlite` on purpose:
 `node:sqlite` is still release-candidate quality, renamed `DatabaseSync` to
 `Database` in Node 26.11, and changed `undefined`-to-`NULL` binding in 26.10.
+
+`zod` is the only new runtime dependency added for the agent. Tool arguments come
+from a model, so they need the same schema validation humans' input gets;
+hand-rolled checks would duplicate that schema in the prompt, the validator and
+the TypeScript types.

@@ -173,8 +173,36 @@ importers:
         specifier: 6.0.3
         version: 6.0.3
 
+  apps/agent:
+    dependencies:
+      '@displayer/agent':
+        specifier: workspace:*
+        version: link:../../packages/agent
+      '@displayer/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+    devDependencies:
+      '@eslint/js':
+        specifier: 10.0.1
+        version: 10.0.1(eslint@10.15.0(supports-color@7.2.0))
+      '@types/node':
+        specifier: 26.6.6
+        version: 26.6.6
+      eslint:
+        specifier: 10.15.0
+        version: 10.15.0(supports-color@7.2.0)
+      globals:
+        specifier: 17.14.0
+        version: 17.14.0
+      typescript-eslint:
+        specifier: 8.73.0
+        version: 8.73.0(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3)
+
   apps/api:
     dependencies:
+      '@displayer/agent':
+        specifier: workspace:*
+        version: link:../../packages/agent
       '@displayer/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -240,6 +268,34 @@ importers:
         specifier: 5.1.1
         version: 5.1.1(@types/node@26.6.6)(jsdom@31.0.1(@noble/hashes@1.8.0))(vite@8.3.8(@types/node@26.6.6))
 
+  apps/bench:
+    dependencies:
+      '@displayer/agent':
+        specifier: workspace:*
+        version: link:../../packages/agent
+      '@displayer/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+    devDependencies:
+      '@eslint/js':
+        specifier: 10.0.1
+        version: 10.0.1(eslint@10.15.0(supports-color@7.2.0))
+      '@types/node':
+        specifier: 26.6.6
+        version: 26.6.6
+      eslint:
+        specifier: 10.15.0
+        version: 10.15.0(supports-color@7.2.0)
+      globals:
+        specifier: 17.14.0
+        version: 17.14.0
+      typescript-eslint:
+        specifier: 8.73.0
+        version: 8.73.0(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3)
+      vitest:
+        specifier: 5.1.1
+        version: 5.1.1(@types/node@26.6.6)(jsdom@31.0.1(@noble/hashes@1.8.0))(vite@8.3.8(@types/node@26.6.6))
+
   apps/web:
     dependencies:
       '@displayer/shared':
@@ -291,6 +347,34 @@ importers:
       jsdom:
         specifier: 31.0.1
         version: 31.0.1(@noble/hashes@1.8.0)
+      vitest:
+        specifier: 5.1.1
+        version: 5.1.1(@types/node@26.6.6)(jsdom@31.0.1(@noble/hashes@1.8.0))(vite@8.3.8(@types/node@26.6.6))
+
+  packages/agent:
+    dependencies:
+      '@displayer/shared':
+        specifier: workspace:*
+        version: link:../shared
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@eslint/js':
+        specifier: 10.0.1
+        version: 10.0.1(eslint@10.15.0(supports-color@7.2.0))
+      '@types/node':
+        specifier: 26.6.6
+        version: 26.6.6
+      eslint:
+        specifier: 10.15.0
+        version: 10.15.0(supports-color@7.2.0)
+      globals:
+        specifier: 17.14.0
+        version: 17.14.0
+      typescript-eslint:
+        specifier: 8.73.0
+        version: 8.73.0(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3)
       vitest:
         specifier: 5.1.1
         version: 5.1.1(@types/node@26.6.6)(jsdom@31.0.1(@noble/hashes@1.8.0))(vite@8.3.8(@types/node@26.6.6))

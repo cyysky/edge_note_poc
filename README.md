@@ -195,9 +195,9 @@ retrieval and speech speed. `docs/benchmark.md` is the current run. The honest
 summary:
 
 - Fast and reliable at describing images, transcribing audio, and calling tools.
-- **Weak at arithmetic**: "20 - 4 Ã— 3" answers "4" every time. Do not route sums
+- **Weak at arithmetic**: "20 - 4 x 3" answers "4" every time. Do not route sums
   through this model.
-- Speech synthesis runs about 7Ã— faster than real time on an RTX 3080.
+- Speech synthesis runs about 7x faster than real time on an RTX 3080.
 
 ## LFM3-Omni-2B local runtime
 
@@ -243,11 +243,12 @@ llama.cpp silently runs CPU-only (~15 t/s instead of ~150 t/s). Override with
 
 ### Start and stop
 
-````powershell
+```powershell
 D:\workspace\20261123_lfm3_omni\start_lfm3.bat    # chat model on 8080
 D:\workspace\20261123_lfm3_omni\stop_lfm3.bat     # stop it
 D:\workspace\20261123_lfm3_omni\start_embed.bat   # EmbeddingGemma 2 on 8091
 D:\workspace\20261123_lfm3_omni\stop_embed.bat    # stop it
+```
 
 Then open <http://localhost:8080>.
 
@@ -263,7 +264,7 @@ Start detached, logging into the runtime folder:
 
 ```powershell
 Start-Process powershell -WindowStyle Hidden -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','D:\workspace\20261123_lfm3_omni\start_lfm3.ps1' -RedirectStandardOutput 'D:\workspace\20261123_lfm3_omni\logs\lfm3.out.log' -RedirectStandardError 'D:\workspace\20261123_lfm3_omni\logs\lfm3.err.log'
-````
+```
 
 `pnpm embed:serve` and `scripts\serve.ps1` stay available from the repository
 and start the same two models with the same GPU pin.
@@ -276,7 +277,7 @@ and start the same two models with the same GPU pin.
 .\scripts\ask.ps1 -Audio .\samples\test_speech.wav -System "Perform ASR in English."
 .\scripts\ask.ps1 -Prompt "Hello from Liquid AI." -Tts -TtsOut .\out\hello.wav -TtsVoice female -TtsLang en
 .\scripts\ask.ps1 -Video .\samples\reading.mp4 -System "Answer questions about the video." -Prompt "What happens here?"
-.\scripts\verify.ps1   # integrity + GPU + generation check
+.\scripts\verify.ps1   # hashes of all four weights + GPU + generation
 ```
 
 `ask.ps1 -Interactive` opens a streaming REPL where `/image`, `/audio` and
@@ -309,7 +310,7 @@ RTX 3080, Q8_0, `-ngl 99`, build `b12645`:
 | Image understanding | ~950 t/s prompt, ~148 t/s generation   |
 | Speech recognition  | ~275 t/s prompt, ~150 t/s generation   |
 | Video understanding | ~3,000 t/s prompt, ~143 t/s generation |
-| Speech synthesis    | ~4.9x faster than real time            |
+| Speech synthesis    | ~7x faster than real time              |
 
 CPU-only: ~72 t/s prompt, ~15 t/s generation. Memory: ~2.9 GB RSS with the
 projector loaded.

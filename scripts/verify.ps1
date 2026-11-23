@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Verify the local LFM3-Omni-2B install: file hashes, GPU visibility, and a short generation.
+  Verify the local install: file hashes for both models, GPU visibility, and a short generation.
 #>
 [CmdletBinding()]
 param([switch]$SkipGeneration)
@@ -10,6 +10,8 @@ param([switch]$SkipGeneration)
 $expected = @{
     'LFM3-Omni-2B-Q8_0.gguf'        = '59118f661eaacb93d204723d76355b53347f0940b508c11412f6290fd49158d4'
     'mmproj-LFM3-Omni-2B-Q8_0.gguf' = '8a25f9d1931244429de404fccacfb7fb933970a36aa5688d2f5069f29c6b27b1'
+    'embeddinggemma-2-Q8_0.gguf'        = '6f1bd4ac6c5df7444f9cca7ca36cafe6cfa34cd6f49fefb1e0b4be8143aed8bc'
+    'mmproj-embeddinggemma-2-Q8_0.gguf' = '90e7b0238009e2954f856f2081dcf7f35af026b64c765e98f4777053e1754460'
 }
 
 $failed = 0

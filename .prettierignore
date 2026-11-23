@@ -1,0 +1,15 @@
+node_modules/
+next-env.d.ts
+.next/
+dist/
+coverage/
+playwright-report/
+test-results/
+models/
+runtime/
+out/
+data/
+e2e-data/
+pnpm-lock.yaml
+.agents/
+samples/

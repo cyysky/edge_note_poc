@@ -25,6 +25,7 @@ test-results/
 *.db-wal
 *.db-shm
 data/
+e2e-data/
 
 # --- Env / logs ---
 .env

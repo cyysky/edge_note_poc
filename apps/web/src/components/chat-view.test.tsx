@@ -7,11 +7,18 @@ import { ChatView } from './chat-view';
 const sendChat = vi.fn();
 const fetchSpeech = vi.fn();
 const describeMedia = vi.fn();
+const readInsecureOrigin = vi.fn<() => string | null>();
 
 vi.mock('@/lib/chat', () => ({
   sendChat: (messages: unknown) => sendChat(messages),
   fetchSpeech: (request: unknown) => fetchSpeech(request),
   describeMedia: (request: unknown) => describeMedia(request),
+}));
+
+// jsdom's `window.location` is read-only, so the component's one origin read is
+// mocked instead: the origin rules themselves are covered in secure-context.test.
+vi.mock('@/lib/secure-context', () => ({
+  readInsecureOrigin: () => readInsecureOrigin(),
 }));
 
 /** A one-pixel PNG: enough for the real File -> base64 path. */
@@ -25,6 +32,8 @@ describe('ChatView', () => {
     fetchSpeech.mockReset();
     describeMedia.mockReset();
     describeMedia.mockResolvedValue({ text: 'A red circle.' });
+    readInsecureOrigin.mockReset();
+    readInsecureOrigin.mockReturnValue(null);
     URL.createObjectURL = vi.fn(() => 'blob:speech');
     URL.revokeObjectURL = vi.fn();
   });
@@ -120,6 +129,30 @@ describe('ChatView', () => {
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('explains the missing microphone on a plain-HTTP LAN origin', async () => {
+    readInsecureOrigin.mockReturnValue('http://192.168.50.222:3100');
+
+    render(<ChatView />);
+
+    const notice = await screen.findByText(/served over plain HTTP/i);
+    expect(notice).toHaveTextContent('http://192.168.50.222:3100');
+    expect(notice).toHaveTextContent('https-cert.ps1');
+    // A page-level condition is already visible; it must not also be announced
+    // through the composer's status region, which belongs to turns.
+    expect(screen.getAllByRole('status')).toHaveLength(1);
+    expect(screen.getByRole('status')).toHaveTextContent('');
+  });
+
+  it('says nothing about HTTPS on a secure origin', async () => {
+    readInsecureOrigin.mockReturnValue(null);
+
+    render(<ChatView />);
+
+    await waitFor(() => expect(readInsecureOrigin).toHaveBeenCalled());
+    expect(screen.queryByText(/served over plain HTTP/i)).not.toBeInTheDocument();
+    expect(screen.getAllByRole('status')).toHaveLength(1);
   });
 
   it('does not send an empty message', async () => {

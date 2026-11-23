@@ -20,7 +20,9 @@ export const RECORDER_MAX_SECONDS = 120;
 export const ERROR_MESSAGES = {
   permission: 'Microphone permission was denied. Allow it in the browser and try again.',
   unavailable: 'No microphone is available on this device.',
-  'not-secure': 'Recording audio needs a secure context (https or localhost).',
+  // Chrome hides the mediaDevices API on a plain-HTTP LAN origin, so the
+  // message names the fix rather than the platform rule.
+  'not-secure': 'Recording needs a secure connection. Open this page over HTTPS, not plain HTTP.',
   inUse: 'The microphone is busy in another app. Close it and try again.',
   unsupported: 'This browser cannot record audio here.',
   unknown: 'The recording could not be captured.',

@@ -79,6 +79,12 @@ describe('describeMediaError', () => {
     expect(describeMediaError({ name: 'NotReadableError' }).kind).toBe('inUse');
   });
 
+  it('names a secure connection when the browser hides media capture', () => {
+    const described = describeMediaError({ name: 'NotSupportedError' });
+    expect(described.kind).toBe('not-secure');
+    expect(described.message).toContain('HTTPS');
+  });
+
   it('falls back to a generic message for an unknown rejection', () => {
     expect(describeMediaError(new Error('boom')).kind).toBe('unknown');
   });

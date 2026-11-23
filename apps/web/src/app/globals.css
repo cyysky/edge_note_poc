@@ -511,6 +511,28 @@ dialog:modal {
   gap: var(--space-4);
 }
 
+/* Plain-HTTP LAN origins cannot open the camera or microphone, so this is a
+   persistent condition, not a one-off error: muted surface, accent-free border,
+   and no live region of its own. */
+.chat-notice {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid color-mix(in oklab, var(--accent) 35%, var(--border));
+  border-inline-start-width: 4px;
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.chat-notice p {
+  margin: 0;
+  color: var(--text);
+}
+
+.chat-notice code {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  overflow-wrap: anywhere;
+}
+
 .chat-log {
   list-style: none;
   margin: 0;

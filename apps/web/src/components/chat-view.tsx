@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useId, useRef, useState } from 'react';
+import { useCallback, useId, useRef, useState, useSyncExternalStore } from 'react';
 
 import {
   CHAT_MAX_MEDIA_BYTES,
@@ -11,6 +11,7 @@ import {
 } from '@displayer/shared';
 
 import { describeMedia, fetchSpeech, sendChat } from '@/lib/chat';
+import { readInsecureOrigin } from '@/lib/secure-context';
 
 import { MediaCaptureDialog, type CaptureKind, type CapturedMedia } from './media-capture-dialog';
 
@@ -51,6 +52,8 @@ type Status =
   | { readonly kind: 'sending' }
   | { readonly kind: 'speaking' }
   | { readonly kind: 'error'; readonly message: string };
+
+const noSubscription = () => () => undefined;
 
 let nextId = 0;
 function makeId(prefix: string): string {
@@ -100,6 +103,17 @@ export function ChatView() {
     readonly id: string;
     readonly text: string;
   } | null>(null);
+
+  /**
+   * The insecure origin, when the page is not allowed to open a device.
+   *
+   * `useSyncExternalStore` is the hydration-safe way to read a browser-only
+   * fact: the page is prerendered at build time with the server snapshot, then
+   * switches to the real origin after hydration without a render-time read.
+   * Origin cannot change without a navigation, so there is nothing to subscribe
+   * to.
+   */
+  const insecureOrigin = useSyncExternalStore(noSubscription, readInsecureOrigin, () => null);
 
   const formId = useId();
   const messageId = `${formId}-message`;
@@ -317,6 +331,20 @@ export function ChatView() {
       <h2 id="chat-heading" className="visually-hidden">
         Conversation
       </h2>
+
+      {/* The browser hides getUserMedia outside a secure context, and a phone
+          on the LAN is exactly that case. Saying so here is the only way the
+          person can tell "no microphone" from "no permission". */}
+      {insecureOrigin ? (
+        <div className="chat-notice">
+          <p>
+            This page is served over plain HTTP at <code>{insecureOrigin}</code>, so the browser
+            hides the microphone and camera. Run <code>.\scripts\https-cert.ps1</code> once, install{' '}
+            <code>certs\rootCA.crt</code> on this device, then open the HTTPS address that{' '}
+            <code>.\scripts\https-serve.ps1</code> starts.
+          </p>
+        </div>
+      ) : null}
 
       <ol className="chat-log" ref={transcriptRef} aria-live="polite" aria-relevant="additions">
         {entries.length === 0 ? (

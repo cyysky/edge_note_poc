@@ -4,19 +4,19 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "predev": "pnpm --filter @displayer/shared build",
+    "predev": "pnpm --filter @displayer/shared build && pnpm --filter @displayer/agent build",
     "dev": "nest start --watch",
-    "prebuild": "pnpm --filter @displayer/shared build",
+    "prebuild": "pnpm --filter @displayer/shared build && pnpm --filter @displayer/agent build",
     "build": "nest build",
-    "prestart": "pnpm --filter @displayer/shared build",
+    "prestart": "pnpm --filter @displayer/shared build && pnpm --filter @displayer/agent build",
     "start": "node dist/main.js",
-    "pretest": "pnpm --filter @displayer/shared build",
+    "pretest": "pnpm --filter @displayer/shared build && pnpm --filter @displayer/agent build",
     "test": "vitest run",
     "test:unit": "vitest run",
-    "pretest:e2e": "pnpm --filter @displayer/shared build",
+    "pretest:e2e": "pnpm --filter @displayer/shared build && pnpm --filter @displayer/agent build",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "lint": "eslint .",
-    "typecheck": "pnpm --filter @displayer/shared build && tsc -p tsconfig.json --noEmit"
+    "typecheck": "pnpm --filter @displayer/shared build && pnpm --filter @displayer/agent build && tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@displayer/agent": "workspace:*",

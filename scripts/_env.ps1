@@ -39,7 +39,8 @@ function Resolve-FfmpegDir {
                 if ($item -and $item.LinkType) { Split-Path -Parent $item.Target }
                 else { Split-Path -Parent $_.Source }
             }),
-        'C:\Users\user\AppData\Local\Microsoft\WinGet\Links'
+        # WinGet links directory, where newer ffmpeg builds land on Windows.
+        $(if ($env:LOCALAPPDATA) { Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Links' })
     )
 
     foreach ($dir in $candidates) {

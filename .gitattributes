@@ -1,0 +1,10 @@
+# Store text as LF in the repository on every platform. Without this, a Windows
+# checkout with core.autocrlf rewrites text files to CRLF.
+* text=auto eol=lf
+
+# Binary assets: never attempt EOL conversion.
+*.gguf binary
+*.png binary
+*.wav binary
+*.mp4 binary
+*.db binary

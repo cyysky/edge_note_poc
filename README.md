@@ -360,3 +360,24 @@ Then update `LFM3_MODEL` / `LFM3_MMPROJ` in `scripts/_env.ps1`.
 - `docs/embeddings.md` - EmbeddingGemma 2 wire formats and retrieval design.
 - `docs/benchmark.md` - measured capability and latency, and how to reproduce.
 - `docs/web-guidance.md` - the Modern Web Guidance rules this UI follows.
+- `THIRD-PARTY-NOTICES.md` - vendored skill, model and sample-media attribution.
+- `LICENSE` - MIT for this repository's own source.
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs the same checks locally as on the remote:
+`pnpm peers check`, `format:check`, `lint`, `typecheck`, `build`, `test`, then
+`test:e2e` against real servers and the stub model. Node and pnpm versions come
+from `docs/stack.md`.
+
+## License
+
+This repository is **MIT** licensed; see `LICENSE`. Third-party material keeps
+its own terms:
+
+- `.agents/skills/modern-web-guidance/` is Apache-2.0, vendored from
+  `GoogleChrome/modern-web-guidance` at the commit pinned in `skills-lock.json`.
+- The LFM3-Omni-2B weights are LFM Open License v1.0; EmbeddingGemma 2 is
+  Apache-2.0. No weights are committed - `models/` is gitignored.
+
+`THIRD-PARTY-NOTICES.md` records the sources, licenses and sample media.

@@ -1,0 +1,50 @@
+import { fileURLToPath } from 'node:url';
+
+import { defineConfig, devices } from '@playwright/test';
+
+const API_PORT = 3001;
+const WEB_PORT = 3100;
+
+/** A unique database per run keeps one run from inheriting another's notes. */
+const databasePath = fileURLToPath(
+  new URL(`./e2e-data/playwright-${Date.now()}.db`, import.meta.url),
+);
+
+export default defineConfig({
+  testDir: './e2e',
+  fullyParallel: false,
+  forbidOnly: Boolean(process.env.CI),
+  retries: process.env.CI ? 2 : 0,
+  workers: 1,
+  reporter: process.env.CI ? 'github' : [['list'], ['html', { open: 'never' }]],
+  use: {
+    baseURL: `http://127.0.0.1:${WEB_PORT}`,
+    trace: 'on-first-retry',
+  },
+  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  webServer: [
+    {
+      command: 'pnpm --filter @displayer/api start',
+      url: `http://127.0.0.1:${API_PORT}/api/health`,
+      cwd: '../..',
+      reuseExistingServer: false,
+      timeout: 120_000,
+      env: {
+        PORT: String(API_PORT),
+        DATABASE_PATH: databasePath,
+      },
+    },
+    {
+      // The API origin is compiled into the Next build, so the API keeps its
+      // default port and the browser reaches it through the `/api` rewrite.
+      command: 'pnpm --filter @displayer/web start',
+      url: `http://127.0.0.1:${WEB_PORT}`,
+      cwd: '../..',
+      reuseExistingServer: false,
+      timeout: 180_000,
+      env: {
+        PORT: String(WEB_PORT),
+      },
+    },
+  ],
+});
